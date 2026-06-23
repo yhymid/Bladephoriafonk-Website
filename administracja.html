@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bladephoriafonk | Administration</title>
+  <meta name="description" content="Administration overview for Bladephoriafonk related Discord groups.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+  <style>
+    .group-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .group-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .group-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .group-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .group-brand h2 {
+      margin: 0 0 4px;
+      font-size: 1.25rem;
+    }
+
+    .group-brand p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .user-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .user-row {
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 14px;
+    }
+
+    .user-toggle {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+    }
+
+    .user-toggle strong {
+      font-size: 1rem;
+    }
+
+    .user-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .user-profile {
+      padding-top: 14px;
+      margin-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .user-profile[hidden] {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <div class="brand-row">
+        <div class="brand-lockup">
+          <p class="brand-kicker" data-i18n="brand_kicker">Administration Directory</p>
+          <h1 class="brand-title" data-i18n="page_heading">Administration</h1>
+          <p class="brand-subtitle" data-i18n="intro_copy">A cleaner overview of people, roles and status across the listed Discord groups.</p>
+        </div>
+
+        <div class="control-cluster">
+          <div class="language-switch">
+            <label for="language-select" data-i18n="language_label">Language</label>
+            <select id="language-select" aria-label="Language selector">
+              <option value="en">English</option>
+              <option value="pl">Polski</option>
+            </select>
+          </div>
+
+          <div class="auth-strip">
+            <a class="btn btn-primary" id="discord-login" href="/auth/discord/login?return_to=/administracja" data-i18n="login">Log in with Discord</a>
+            <a class="btn btn-secondary" id="my-profile" href="/profile/" hidden data-i18n="my_profile">My profile</a>
+            <button class="btn btn-ghost" id="discord-logout" type="button" hidden data-i18n="logout">Log out</button>
+          </div>
+        </div>
+      </div>
+
+      <nav class="pill-nav">
+        <a href="/" data-i18n="nav_home">Home</a>
+        <a href="/server" data-i18n="nav_server">Server</a>
+        <a href="/changelog" data-i18n="nav_changelog">Changelog</a>
+      </nav>
+    </header>
+
+    <section class="section-card">
+      <div class="button-row">
+        <div>
+          <h2 class="section-title" data-i18n="section_title">Find people faster</h2>
+          <p class="section-subtitle" data-i18n="section_copy">Search by nickname, role, Discord ID or server name. Use expand/collapse to scan the list more comfortably.</p>
+        </div>
+      </div>
+
+      <div class="search-row" style="margin-top:16px;">
+        <input class="field-input search-input" id="admin-search" type="search" data-i18n-placeholder="search_placeholder" placeholder="Search by name, role or ID">
+        <div class="auth-strip">
+          <button class="btn btn-secondary" id="expand-all" type="button" data-i18n="expand_all">Expand all</button>
+          <button class="btn btn-secondary" id="collapse-all" type="button" data-i18n="collapse_all">Collapse all</button>
+        </div>
+      </div>
+
+      <p class="status-note" id="auth-status" aria-live="polite"></p>
+      <p class="status-note" id="search-status"></p>
+    </section>
+
+    <div class="group-list" id="group-list"></div>
+  </div>
+
+  <script src="/site-lang.js"></script>
+  <script src="/assets/site-ui.js"></script>
+  <script>
+    const GROUPS = [
+      {
+        key: "blade",
+        name: "Bladephoriafonk",
+        icon: "https://cdn.discordapp.com/icons/1008460463148900373/a_5f47e76cff51f39ac1dc0acbd1f46d9b.gif?size=128",
+        users: [
+          { key: "blade-yhym", name: "!Yhym's", discordId: "780552865445969920", role: "Technician", server: "Bladephoriafonk", status: "Active" },
+          { key: "blade-pokora", name: "Pokora", discordId: "752986566426624061", role: "Trader", server: "Bladephoriafonk", status: "Active" },
+          { key: "blade-monte", name: "Monte", discordId: "989565106197245974", role: "Employee of the Month", server: "Bladephoriafonk", status: "Active" }
+        ]
+      },
+      {
+        key: "pmc",
+        name: "PMC Ashley Group",
+        icon: "https://cdn.discordapp.com/icons/1164515203023642695/0bf9e90217094cea331b06fa049e81a0.png?size=128",
+        users: [
+          { key: "pmc-paczek", name: "pączekBączekXD", discordId: "698946931992428555", role: "Group Commander", server: "PMC Ashley Group", status: "Active" },
+          { key: "pmc-bocian", name: "Bocian", discordId: "758239519924944917", role: "Silent Member", server: "PMC Ashley Group", status: "Active" },
+          { key: "pmc-yhym", name: "!Yhym's", discordId: "780552865445969920", role: "Technician", server: "PMC Ashley Group", status: "Active" },
+          { key: "pmc-xkonservq", name: "xKonservq", discordId: "950054129588387860", role: "Inactive Admin", server: "PMC Ashley Group", status: "Away" }
+        ]
+      }
+    ];
+
+    const state = {
+      query: "",
+      expanded: new Set(),
+      session: { authenticated: false }
+    };
+
+    const I18N = {
+      en: {
+        page_title: "Bladephoriafonk | Administration",
+        brand_kicker: "Administration Directory",
+        page_heading: "Administration",
+        intro_copy: "A cleaner overview of people, roles and status across the listed Discord groups.",
+        language_label: "Language",
+        login: "Log in with Discord",
+        my_profile: "My profile",
+        logout: "Log out",
+        nav_home: "Home",
+        nav_server: "Server",
+        nav_changelog: "Changelog",
+        section_title: "Find people faster",
+        section_copy: "Search by nickname, role, Discord ID or server name. Use expand/collapse to scan the list more comfortably.",
+        search_placeholder: "Search by name, role or ID",
+        expand_all: "Expand all",
+        collapse_all: "Collapse all",
+        auth_status_guest: "This directory is public. Sign in only if you want quick access to your profile.",
+        auth_status_user: "Signed in as {name}. You can jump to your profile at any time.",
+        search_status_all: "Showing {count} people across all groups.",
+        search_status_filtered: "Found {count} matching people.",
+        group_count: "{count} people listed",
+        no_results: "No people match the current search.",
+        show_user: "Show {name}",
+        hide_user: "Hide {name}",
+        label_name: "Name:",
+        label_discord_id: "Discord ID:",
+        label_role: "Role:",
+        label_server: "Server:",
+        label_status: "Status:"
+      },
+      pl: {
+        page_title: "Bladephoriafonk | Administracja",
+        brand_kicker: "Katalog administracji",
+        page_heading: "Administracja",
+        intro_copy: "Czytelniejszy przeglad osob, rol i statusow w wymienionych grupach Discord.",
+        language_label: "Jezyk",
+        login: "Zaloguj sie przez Discord",
+        my_profile: "Moj profil",
+        logout: "Wyloguj",
+        nav_home: "Strona glowna",
+        nav_server: "Serwer",
+        nav_changelog: "Dziennik zmian",
+        section_title: "Znajduj ludzi szybciej",
+        section_copy: "Szukaj po nicku, roli, ID Discord albo nazwie serwera. Uzyj rozwin/zwin, aby wygodniej przegladac liste.",
+        search_placeholder: "Szukaj po nazwie, roli albo ID",
+        expand_all: "Rozwin wszystkie",
+        collapse_all: "Zwin wszystkie",
+        auth_status_guest: "Ten katalog jest publiczny. Logowanie przydaje sie tylko do szybkiego przejscia do profilu.",
+        auth_status_user: "Zalogowano jako {name}. W kazdej chwili mozesz przejsc do swojego profilu.",
+        search_status_all: "Widocznych jest {count} osob ze wszystkich grup.",
+        search_status_filtered: "Znaleziono {count} pasujacych osob.",
+        group_count: "{count} osob na liscie",
+        no_results: "Brak osob pasujacych do aktualnego wyszukiwania.",
+        show_user: "Pokaz {name}",
+        hide_user: "Ukryj {name}",
+        label_name: "Nazwa:",
+        label_discord_id: "ID Discord:",
+        label_role: "Rola:",
+        label_server: "Serwer:",
+        label_status: "Status:"
+      }
+    };
+
+    function t(key) {
+      return window.SiteLang.translate(I18N, key, window.SiteLang.getLanguage());
+    }
+
+    function formatMessage(key, params) {
+      return window.SiteUi.format(t(key), params);
+    }
+
+    function statusTone(value) {
+      return String(value || "").toLowerCase() === "away" ? "warning" : "success";
+    }
+
+    function getFilteredGroups() {
+      const query = state.query.trim().toLowerCase();
+      if (!query) {
+        return GROUPS;
+      }
+
+      return GROUPS
+        .map((group) => ({
+          ...group,
+          users: group.users.filter((user) => {
+            const haystack = [
+              user.name,
+              user.discordId,
+              user.role,
+              user.server,
+              user.status
+            ].join(" ").toLowerCase();
+            return haystack.includes(query);
+          })
+        }))
+        .filter((group) => group.users.length > 0);
+    }
+
+    function updateSearchStatus(filteredGroups) {
+      const count = filteredGroups.reduce((sum, group) => sum + group.users.length, 0);
+      const message = state.query.trim()
+        ? (count ? formatMessage("search_status_filtered", { count }) : t("no_results"))
+        : formatMessage("search_status_all", { count });
+
+      const element = document.getElementById("search-status");
+      if (!element) {
+        return;
+      }
+      element.textContent = message;
+      element.dataset.tone = count ? "info" : "warning";
+    }
+
+    function renderGroups() {
+      const groups = getFilteredGroups();
+      const container = document.getElementById("group-list");
+      if (!container) {
+        return;
+      }
+
+      container.innerHTML = "";
+      updateSearchStatus(groups);
+
+      if (!groups.length) {
+        const empty = document.createElement("section");
+        empty.className = "section-card";
+        const message = document.createElement("p");
+        message.className = "empty-state";
+        message.textContent = t("no_results");
+        empty.appendChild(message);
+        container.appendChild(empty);
+        return;
+      }
+
+      groups.forEach((group) => {
+        const section = document.createElement("section");
+        section.className = "section-card";
+
+        const head = document.createElement("div");
+        head.className = "group-head";
+
+        const brand = document.createElement("div");
+        brand.className = "group-brand";
+
+        const icon = document.createElement("img");
+        icon.className = "group-icon";
+        icon.alt = `${group.name} logo`;
+        icon.src = group.icon;
+
+        const brandCopy = document.createElement("div");
+        const title = document.createElement("h2");
+        title.textContent = group.name;
+        const subtitle = document.createElement("p");
+        subtitle.textContent = formatMessage("group_count", { count: group.users.length });
+
+        brandCopy.appendChild(title);
+        brandCopy.appendChild(subtitle);
+        brand.appendChild(icon);
+        brand.appendChild(brandCopy);
+
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.dataset.tone = "info";
+        badge.textContent = `${group.users.length}`;
+
+        head.appendChild(brand);
+        head.appendChild(badge);
+        section.appendChild(head);
+
+        const list = document.createElement("div");
+        list.className = "user-list";
+
+        group.users.forEach((user) => {
+          const expanded = state.expanded.has(user.key);
+          const row = document.createElement("article");
+          row.className = "user-row";
+
+          const button = document.createElement("button");
+          button.className = "user-toggle";
+          button.type = "button";
+          button.setAttribute("aria-expanded", expanded ? "true" : "false");
+          button.addEventListener("click", () => {
+            if (state.expanded.has(user.key)) {
+              state.expanded.delete(user.key);
+            } else {
+              state.expanded.add(user.key);
+            }
+            renderGroups();
+          });
+
+          const left = document.createElement("div");
+          const name = document.createElement("strong");
+          name.textContent = user.name;
+          const toggleCopy = document.createElement("p");
+          toggleCopy.className = "muted-copy";
+          toggleCopy.textContent = expanded ? formatMessage("hide_user", { name: user.name }) : formatMessage("show_user", { name: user.name });
+          left.appendChild(name);
+          left.appendChild(toggleCopy);
+
+          const meta = document.createElement("div");
+          meta.className = "user-meta";
+
+          const roleBadge = document.createElement("span");
+          roleBadge.className = "badge";
+          roleBadge.dataset.tone = "info";
+          roleBadge.textContent = user.role;
+
+          const statusBadge = document.createElement("span");
+          statusBadge.className = "badge";
+          statusBadge.dataset.tone = statusTone(user.status);
+          statusBadge.textContent = user.status;
+
+          meta.appendChild(roleBadge);
+          meta.appendChild(statusBadge);
+
+          button.appendChild(left);
+          button.appendChild(meta);
+          row.appendChild(button);
+
+          const profile = document.createElement("div");
+          profile.className = "user-profile";
+          profile.hidden = !expanded;
+
+          const listNode = document.createElement("ul");
+          listNode.className = "list-reset kv-list";
+
+          [
+            [t("label_name"), user.name],
+            [t("label_discord_id"), user.discordId],
+            [t("label_role"), user.role],
+            [t("label_server"), user.server],
+            [t("label_status"), user.status]
+          ].forEach(([label, value]) => {
+            const item = document.createElement("li");
+            const strong = document.createElement("strong");
+            strong.textContent = label;
+            const span = document.createElement("span");
+            span.textContent = value;
+            item.appendChild(strong);
+            item.appendChild(span);
+            listNode.appendChild(item);
+          });
+
+          profile.appendChild(listNode);
+          row.appendChild(profile);
+          list.appendChild(row);
+        });
+
+        section.appendChild(list);
+        container.appendChild(section);
+      });
+    }
+
+    function renderAuthStatus(authControls) {
+      const user = state.session?.user || {};
+      const name = user.global_name || user.username || "Discord";
+      const message = state.session?.authenticated
+        ? formatMessage("auth_status_user", { name })
+        : t("auth_status_guest");
+      authControls.setStatus(message, state.session?.authenticated ? "success" : "info");
+    }
+
+    const authControls = window.SiteUi.initAuthControls({
+      returnTo: "/administracja",
+      statusId: "auth-status",
+      onSession(data) {
+        state.session = data || { authenticated: false };
+        renderAuthStatus(authControls);
+      }
+    });
+
+    document.getElementById("admin-search")?.addEventListener("input", (event) => {
+      state.query = event.currentTarget.value || "";
+      renderGroups();
+    });
+
+    document.getElementById("expand-all")?.addEventListener("click", () => {
+      getFilteredGroups().forEach((group) => {
+        group.users.forEach((user) => state.expanded.add(user.key));
+      });
+      renderGroups();
+    });
+
+    document.getElementById("collapse-all")?.addEventListener("click", () => {
+      state.expanded.clear();
+      renderGroups();
+    });
+
+    window.SiteUi.applyLanguage(I18N, {
+      onApplied() {
+        renderAuthStatus(authControls);
+        renderGroups();
+      }
+    });
+
+    authControls.refresh();
+    renderGroups();
+  </script>
+</body>
+</html>

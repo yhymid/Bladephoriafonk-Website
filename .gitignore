@@ -1,0 +1,21 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OAuth runtime data
+oauth/.env
+oauth/.env.*
+!oauth/.env.example
+oauth/data/profiles.json
+oauth/data/*.bak
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

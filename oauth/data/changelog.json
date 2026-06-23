@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "posts": [
+    {
+      "id": "website-1-0",
+      "title": "Website 1.0: Init Project",
+      "content": "First version of website Bladephoriafonk",
+      "media_url": "",
+      "media_type": "",
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "created_by": {
+        "id": "system",
+        "username": "system",
+        "global_name": "System"
+      }
+    }
+  ]
+}

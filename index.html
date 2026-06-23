@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bladephoriafonk</title>
+  <meta name="description" content="Bladephoriafonk website hub with Discord login, server details, staff listing and changelog.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <div class="brand-row">
+        <div class="brand-lockup">
+          <p class="brand-kicker" data-i18n="brand_kicker">Operations Hub</p>
+          <h1 class="brand-title">Bladephoriafonk</h1>
+          <p class="brand-subtitle" data-i18n="hero_copy">One simple place for server links, profile access, staff overview and the latest project updates.</p>
+        </div>
+
+        <div class="control-cluster">
+          <div class="language-switch">
+            <label for="language-select" data-i18n="language_label">Language</label>
+            <select id="language-select" aria-label="Language selector">
+              <option value="en">English</option>
+              <option value="pl">Polski</option>
+            </select>
+          </div>
+
+          <div class="auth-strip">
+            <a class="btn btn-primary" id="discord-login" href="/auth/discord/login?return_to=/" data-i18n="login">Log in with Discord</a>
+            <a class="btn btn-secondary" id="my-profile" href="/profile/" hidden data-i18n="my_profile">My profile</a>
+            <button class="btn btn-ghost" id="discord-logout" type="button" hidden data-i18n="logout">Log out</button>
+          </div>
+        </div>
+      </div>
+
+      <nav class="pill-nav">
+        <a href="/server" data-i18n="nav_server">Server</a>
+        <a href="/administracja" data-i18n="nav_admin">Administration</a>
+        <a href="/changelog" data-i18n="nav_changelog">Changelog</a>
+      </nav>
+    </header>
+
+    <section class="section-card">
+      <div class="split-grid">
+        <div class="feature-card">
+          <div class="kicker-row">
+            <span class="tag" data-i18n="hero_badge">Fast access</span>
+            <span class="tag" data-i18n="hero_badge_secondary">Discord powered</span>
+          </div>
+          <h2 data-i18n="hero_title">Everything important is one click away</h2>
+          <p data-i18n="hero_copy_long">Sign in once, jump straight to your profile, review server details, browse the changelog and keep the whole site in your preferred language.</p>
+          <div class="auth-strip" style="margin-top:16px;">
+            <a class="btn btn-primary" href="/server" data-i18n="cta_server">Open server page</a>
+            <a class="btn btn-secondary" href="/changelog" data-i18n="cta_changelog">Read changelog</a>
+          </div>
+        </div>
+
+        <div class="note-card">
+          <h2 data-i18n="auth_status_title">Quick status</h2>
+          <p class="status-note" id="auth-status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="cards-grid">
+      <article class="feature-card">
+        <h2 data-i18n="card_server_title">Server page</h2>
+        <p data-i18n="card_server_copy">Public server snapshots are fetched through the backend, cached safely and refreshed without exposing raw internal files.</p>
+      </article>
+
+      <article class="feature-card">
+        <h2 data-i18n="card_profile_title">Profile page</h2>
+        <p data-i18n="card_profile_copy">Your profile now has shared assets, clearer public/private controls and a smoother owner flow.</p>
+      </article>
+
+      <article class="feature-card">
+        <h2 data-i18n="card_updates_title">Changelog</h2>
+        <p data-i18n="card_updates_copy">Admins can create updates with preview support, while visitors get a cleaner timeline and clearer media handling.</p>
+      </article>
+    </section>
+
+    <section class="stats-grid">
+      <article class="metric-card">
+        <h2 data-i18n="metric_secure_title">Safer by default</h2>
+        <p data-i18n="metric_secure_copy">Sensitive folders and dotfiles are no longer meant to be public, and the app now has a safer deployment path for VPS.</p>
+      </article>
+
+      <article class="metric-card">
+        <h2 data-i18n="metric_easy_title">Easier to use</h2>
+        <p data-i18n="metric_easy_copy">Language selection, login state and common actions are visible immediately instead of being scattered across pages.</p>
+      </article>
+
+      <article class="metric-card">
+        <h2 data-i18n="metric_stable_title">More stable</h2>
+        <p data-i18n="metric_stable_copy">Profile links stay stable, changelog writes are safer and repeated profile refreshes hit Discord far less aggressively.</p>
+      </article>
+    </section>
+  </div>
+
+  <script src="/site-lang.js"></script>
+  <script src="/assets/site-ui.js"></script>
+  <script>
+    const state = {
+      session: { authenticated: false }
+    };
+
+    const I18N = {
+      en: {
+        page_title: "Bladephoriafonk",
+        brand_kicker: "Operations Hub",
+        hero_title: "Everything important is one click away",
+        hero_copy: "One simple place for server links, profile access, staff overview and the latest project updates.",
+        hero_copy_long: "Sign in once, jump straight to your profile, review server details, browse the changelog and keep the whole site in your preferred language.",
+        hero_badge: "Fast access",
+        hero_badge_secondary: "Discord powered",
+        language_label: "Language",
+        login: "Log in with Discord",
+        my_profile: "My profile",
+        logout: "Log out",
+        nav_server: "Server",
+        nav_admin: "Administration",
+        nav_changelog: "Changelog",
+        cta_server: "Open server page",
+        cta_changelog: "Read changelog",
+        auth_status_title: "Quick status",
+        auth_status_guest: "Sign in to unlock your personal profile, faster actions and admin tools where available.",
+        auth_status_user: "Signed in as {name}. You can open your profile immediately.",
+        card_server_title: "Server page",
+        card_server_copy: "Public server snapshots are fetched through the backend, cached safely and refreshed without exposing raw internal files.",
+        card_profile_title: "Profile page",
+        card_profile_copy: "Your profile now has shared assets, clearer public/private controls and a smoother owner flow.",
+        card_updates_title: "Changelog",
+        card_updates_copy: "Admins can create updates with preview support, while visitors get a cleaner timeline and clearer media handling.",
+        metric_secure_title: "Safer by default",
+        metric_secure_copy: "Sensitive folders and dotfiles are no longer meant to be public, and the app now has a safer deployment path for VPS.",
+        metric_easy_title: "Easier to use",
+        metric_easy_copy: "Language selection, login state and common actions are visible immediately instead of being scattered across pages.",
+        metric_stable_title: "More stable",
+        metric_stable_copy: "Profile links stay stable, changelog writes are safer and repeated profile refreshes hit Discord far less aggressively."
+      },
+      pl: {
+        page_title: "Bladephoriafonk",
+        brand_kicker: "Centrum operacyjne",
+        hero_title: "Wszystko wazne jest o jedno klikniecie stad",
+        hero_copy: "Jedno proste miejsce dla linkow do serwerow, dostepu do profilu, przegladu administracji i najnowszych aktualizacji.",
+        hero_copy_long: "Zaloguj sie raz, przejdz od razu do profilu, sprawdz dane serwerow, przegladnij changelog i korzystaj z calej strony w wybranym jezyku.",
+        hero_badge: "Szybki dostep",
+        hero_badge_secondary: "Napędzane przez Discord",
+        language_label: "Jezyk",
+        login: "Zaloguj sie przez Discord",
+        my_profile: "Moj profil",
+        logout: "Wyloguj",
+        nav_server: "Serwer",
+        nav_admin: "Administracja",
+        nav_changelog: "Dziennik zmian",
+        cta_server: "Otworz strone serwerow",
+        cta_changelog: "Czytaj changelog",
+        auth_status_title: "Szybki status",
+        auth_status_guest: "Zaloguj sie, aby odblokowac osobisty profil, szybsze akcje i narzedzia administracyjne tam, gdzie sa dostepne.",
+        auth_status_user: "Zalogowano jako {name}. Mozesz od razu otworzyc swoj profil.",
+        card_server_title: "Strona serwerow",
+        card_server_copy: "Publiczne migawki serwerow sa pobierane przez backend, bezpiecznie cache'owane i odswiezane bez wystawiania wewnetrznych plikow.",
+        card_profile_title: "Strona profilu",
+        card_profile_copy: "Profil ma teraz wspolne assety, czytelniejsze przelaczniki publiczny/prywatny i przyjemniejszy przeplyw dla wlasciciela.",
+        card_updates_title: "Changelog",
+        card_updates_copy: "Administratorzy dostaja tworzenie wpisow z podgladem, a odwiedzajacy czytelniejsza os czasu i lepsza obsluge mediow.",
+        metric_secure_title: "Bezpieczniej domyslnie",
+        metric_secure_copy: "Wrazliwe katalogi i pliki ukryte nie powinny byc juz publiczne, a aplikacja ma bezpieczniejsza sciezke wdrozenia na VPS.",
+        metric_easy_title: "Latwiej w uzyciu",
+        metric_easy_copy: "Wybor jezyka, stan logowania i wspolne akcje sa widoczne od razu zamiast byc rozrzucone po stronach.",
+        metric_stable_title: "Stabilniej",
+        metric_stable_copy: "Linki do profili sa stabilne, zapisy changeloga bezpieczniejsze, a powtarzane odswiezanie profilu znacznie mniej obciaza Discord."
+      }
+    };
+
+    function renderAuthStatus(authControls) {
+      const user = state.session?.user || {};
+      const name = user.global_name || user.username || "Discord";
+      const message = state.session?.authenticated
+        ? window.SiteUi.format(window.SiteLang.translate(I18N, "auth_status_user", window.SiteLang.getLanguage()), { name })
+        : window.SiteLang.translate(I18N, "auth_status_guest", window.SiteLang.getLanguage());
+      authControls.setStatus(message, state.session?.authenticated ? "success" : "info");
+    }
+
+    const authControls = window.SiteUi.initAuthControls({
+      returnTo: "/",
+      statusId: "auth-status",
+      onSession(data) {
+        state.session = data || { authenticated: false };
+        renderAuthStatus(authControls);
+      }
+    });
+
+    window.SiteUi.applyLanguage(I18N, {
+      onApplied() {
+        renderAuthStatus(authControls);
+      }
+    });
+
+    authControls.refresh();
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+[Unit]
+Description=Bladephoria Discord OAuth Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/yhymfiles/website/oauth
+EnvironmentFile=/home/ubuntu/.bladephoria-oauth.env
+ExecStart=/usr/bin/node --env-file=/home/ubuntu/.bladephoria-oauth.env /home/ubuntu/yhymfiles/website/oauth/discord-auth-server.mjs
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bladephoriafonk | Profile</title>
+  <meta name="description" content="Bladephoriafonk profile page powered by Discord OAuth.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+  <link rel="stylesheet" href="/assets/profile.css">
+</head>
+<body>
+  <div class="page-shell profile-page">
+    <header class="site-header site-header--compact">
+      <div class="brand-row">
+        <div class="brand-lockup">
+          <p class="brand-kicker" data-i18n="brand_kicker">Discord Profile Hub</p>
+          <h1 class="brand-title" data-i18n="page_heading">Profile</h1>
+          <p class="brand-subtitle" data-i18n="intro_copy">Your Discord profile, public connections and quick account actions live here.</p>
+        </div>
+
+        <div class="control-cluster">
+          <div class="language-switch">
+            <label for="language-select" data-i18n="language_label">Language</label>
+            <select id="language-select" aria-label="Language selector">
+              <option value="en">English</option>
+              <option value="pl">Polski</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <nav class="pill-nav">
+        <a href="/" data-i18n="nav_home">Home</a>
+        <a href="/server" data-i18n="nav_server">Server</a>
+        <a href="/administracja" data-i18n="nav_admin">Administration</a>
+        <a href="/changelog" data-i18n="nav_changelog">Changelog</a>
+      </nav>
+    </header>
+
+    <main id="profile-main" hidden>
+      <section class="section-card">
+        <div class="profile-banner" id="profile-banner">
+          <img id="profile-banner-image" hidden alt="">
+          <div class="profile-banner-fallback" id="profile-banner-fallback" data-i18n="no_banner">No Discord banner available</div>
+        </div>
+
+        <div class="profile-identity-row">
+          <img class="profile-avatar" id="profile-avatar" alt="Profile avatar" src="https://cdn.discordapp.com/embed/avatars/0.png">
+
+          <div class="profile-identity">
+            <div class="kicker-row">
+              <span class="tag" id="profile-mode-indicator" data-tone="warning">Private profile</span>
+            </div>
+            <h2 id="profile-display-name">Profile</h2>
+            <p class="eyebrow-copy" id="profile-username">@-</p>
+            <p class="profile-description" id="profile-description" data-i18n="intro_copy">Your Discord profile, public connections and quick account actions live here.</p>
+          </div>
+        </div>
+
+        <div class="owner-controls" id="owner-controls" hidden>
+          <button class="btn btn-secondary" id="logout-discord" type="button">Log out</button>
+          <button class="btn btn-secondary" id="refresh-profile" type="button">Refresh profile</button>
+          <button class="btn btn-secondary" id="public-mode-toggle" type="button">Turn public mode on</button>
+          <button class="btn btn-secondary" id="copy-public-link" type="button">Copy public link</button>
+          <button class="btn btn-ghost" id="delete-profile" type="button">Delete profile</button>
+        </div>
+
+        <p class="status-copy" id="owner-status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel-grid">
+        <article class="section-card">
+          <h2 class="section-title" data-i18n="connections_title">Connections</h2>
+          <p class="section-subtitle" data-i18n="connections_copy">Accounts visible in Discord settings appear here. Hidden or revoked ones are omitted from public mode.</p>
+          <div class="connection-icons" id="connection-icons"></div>
+          <div class="connection-list" id="oauth-connections"></div>
+          <p class="empty-state" id="connections-empty" hidden data-i18n="empty_connections">No connected accounts were found. Add them in Discord settings and refresh the profile.</p>
+        </article>
+
+        <article class="section-card">
+          <h2 class="section-title" data-i18n="info_title">Profile Info</h2>
+          <ul class="list-reset kv-list">
+            <li><strong data-i18n="label_display_name">Display Name:</strong> <span id="info-display-name">-</span></li>
+            <li><strong data-i18n="label_username">Username:</strong> <span id="info-username">-</span></li>
+            <li><strong data-i18n="label_public_badges">Public Badges:</strong> <span id="info-public-badges">-</span></li>
+            <li><strong data-i18n="label_banner_color">Banner Color:</strong> <span id="info-banner-color">-</span></li>
+            <li><strong data-i18n="label_accent_color">Accent Color:</strong> <span id="info-accent-color">-</span></li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="section-card" id="guild-panel" hidden>
+        <h2 class="section-title" data-i18n="guild_title">Guild Snapshot</h2>
+        <p class="section-subtitle" data-i18n="guild_copy">Extra details from the preferred Discord server, when Discord exposes them.</p>
+        <div class="guild-stack">
+          <ul class="list-reset kv-list">
+            <li><strong data-i18n="label_guild_name">Guild Name:</strong> <span id="guild-name">-</span></li>
+            <li><strong data-i18n="label_guild_nick">Guild Nickname:</strong> <span id="guild-nick">-</span></li>
+            <li><strong data-i18n="label_guild_bio">Guild Bio:</strong> <span id="guild-bio">-</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <p class="status-copy profile-updated" id="profile-updated"></p>
+    </main>
+
+    <section class="section-card profile-state-card" id="public-state">
+      <h2 data-i18n="loading_profile">Loading profile...</h2>
+      <p id="public-state-message">Loading profile...</p>
+      <div class="auth-strip">
+        <a class="btn btn-secondary" id="public-state-home-link" href="/" data-i18n="back_home">Back to home</a>
+        <a class="btn btn-primary" id="public-state-login-link" href="/auth/discord/login?return_to=/profile/" data-i18n="sign_in_action">Sign in with Discord</a>
+      </div>
+    </section>
+  </div>
+
+  <script src="/site-lang.js"></script>
+  <script src="/assets/site-ui.js"></script>
+  <script src="/assets/profile-app.js"></script>
+</body>
+</html>
