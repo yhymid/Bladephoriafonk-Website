@@ -4,202 +4,268 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bladephoriafonk</title>
-  <meta name="description" content="Bladephoriafonk website hub with Discord login, server details, staff listing and changelog.">
-  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/site.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 24px;
+    }
+
+    main {
+      width: min(100%, 920px);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 7vw, 4rem);
+      color: #fff;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    .desc {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      margin-bottom: 12px;
+    }
+
+    .language-area {
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .language-area label {
+      color: #d9d9d9;
+      font-size: 0.95rem;
+    }
+
+    .language-select {
+      background: #111;
+      color: #fff;
+      border: 1px solid #2f2f2f;
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 0.95rem;
+    }
+
+    .auth-area {
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      color: #fff;
+      text-decoration: none;
+      border: 1px solid #2f2f2f;
+      background: #141414;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #1b1b1b;
+    }
+
+    nav {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      color: #fff;
+      text-decoration: underline;
+      font-size: 1.05rem;
+    }
+  </style>
 </head>
 <body>
-  <div class="page-shell">
-    <header class="site-header">
-      <div class="brand-row">
-        <div class="brand-lockup">
-          <p class="brand-kicker" data-i18n="brand_kicker">Operations Hub</p>
-          <h1 class="brand-title">Bladephoriafonk</h1>
-          <p class="brand-subtitle" data-i18n="hero_copy">One simple place for server links, profile access, staff overview and the latest project updates.</p>
-        </div>
+  <main>
+    <h1>Bladephoriafonk</h1>
+    <p class="desc" data-i18n="home_desc">This website is suspected to be an Organized Crime Group that manipulates time. Please report any suspicious activity to OVHCloud Staff.</p>
 
-        <div class="control-cluster">
-          <div class="language-switch">
-            <label for="language-select" data-i18n="language_label">Language</label>
-            <select id="language-select" aria-label="Language selector">
-              <option value="en">English</option>
-              <option value="pl">Polski</option>
-            </select>
-          </div>
-
-          <div class="auth-strip">
-            <a class="btn btn-primary" id="discord-login" href="/auth/discord/login?return_to=/" data-i18n="login">Log in with Discord</a>
-            <a class="btn btn-secondary" id="my-profile" href="/profile/" hidden data-i18n="my_profile">My profile</a>
-            <button class="btn btn-ghost" id="discord-logout" type="button" hidden data-i18n="logout">Log out</button>
-          </div>
-        </div>
-      </div>
-
-      <nav class="pill-nav">
-        <a href="/server" data-i18n="nav_server">Server</a>
-        <a href="/administracja" data-i18n="nav_admin">Administration</a>
-        <a href="/changelog" data-i18n="nav_changelog">Changelog</a>
-      </nav>
-    </header>
-
-    <section class="section-card">
-      <div class="split-grid">
-        <div class="feature-card">
-          <div class="kicker-row">
-            <span class="tag" data-i18n="hero_badge">Fast access</span>
-            <span class="tag" data-i18n="hero_badge_secondary">Discord powered</span>
-          </div>
-          <h2 data-i18n="hero_title">Everything important is one click away</h2>
-          <p data-i18n="hero_copy_long">Sign in once, jump straight to your profile, review server details, browse the changelog and keep the whole site in your preferred language.</p>
-          <div class="auth-strip" style="margin-top:16px;">
-            <a class="btn btn-primary" href="/server" data-i18n="cta_server">Open server page</a>
-            <a class="btn btn-secondary" href="/changelog" data-i18n="cta_changelog">Read changelog</a>
-          </div>
-        </div>
-
-        <div class="note-card">
-          <h2 data-i18n="auth_status_title">Quick status</h2>
-          <p class="status-note" id="auth-status" aria-live="polite"></p>
-        </div>
-      </div>
+    <section class="language-area">
+      <label for="language-select" data-i18n="language_label">Language</label>
+      <select class="language-select" id="language-select" aria-label="Language selector">
+        <option value="en">English</option>
+        <option value="pl">Polski</option>
+      </select>
     </section>
 
-    <section class="cards-grid">
-      <article class="feature-card">
-        <h2 data-i18n="card_server_title">Server page</h2>
-        <p data-i18n="card_server_copy">Public server snapshots are fetched through the backend, cached safely and refreshed without exposing raw internal files.</p>
-      </article>
-
-      <article class="feature-card">
-        <h2 data-i18n="card_profile_title">Profile page</h2>
-        <p data-i18n="card_profile_copy">Your profile now has shared assets, clearer public/private controls and a smoother owner flow.</p>
-      </article>
-
-      <article class="feature-card">
-        <h2 data-i18n="card_updates_title">Changelog</h2>
-        <p data-i18n="card_updates_copy">Admins can create updates with preview support, while visitors get a cleaner timeline and clearer media handling.</p>
-      </article>
+    <section class="auth-area">
+      <a class="btn" id="discord-login" href="/auth/discord/login?return_to=/" data-i18n="login">Log in with Discord</a>
+      <a class="btn" id="my-profile" href="/profile/" hidden data-i18n="my_profile">My profile</a>
+      <button class="btn" id="discord-logout" type="button" hidden data-i18n="logout">Log out</button>
     </section>
 
-    <section class="stats-grid">
-      <article class="metric-card">
-        <h2 data-i18n="metric_secure_title">Safer by default</h2>
-        <p data-i18n="metric_secure_copy">Sensitive folders and dotfiles are no longer meant to be public, and the app now has a safer deployment path for VPS.</p>
-      </article>
-
-      <article class="metric-card">
-        <h2 data-i18n="metric_easy_title">Easier to use</h2>
-        <p data-i18n="metric_easy_copy">Language selection, login state and common actions are visible immediately instead of being scattered across pages.</p>
-      </article>
-
-      <article class="metric-card">
-        <h2 data-i18n="metric_stable_title">More stable</h2>
-        <p data-i18n="metric_stable_copy">Profile links stay stable, changelog writes are safer and repeated profile refreshes hit Discord far less aggressively.</p>
-      </article>
-    </section>
-  </div>
+    <nav>
+      <a href="/server" data-i18n="nav_server">Server</a>
+      <a href="/administracja" data-i18n="nav_admin">Administration</a>
+      <a href="/changelog" data-i18n="nav_changelog">Changelog</a>
+    </nav>
+  </main>
 
   <script src="/site-lang.js"></script>
-  <script src="/assets/site-ui.js"></script>
   <script>
-    const state = {
-      session: { authenticated: false }
-    };
+    if (!window.SiteLang) {
+      document.write('<script src="./site-lang.js"><\\/script>');
+    }
+  </script>
+  <script>
+    const AUTH_SESSION_ENDPOINT = "/auth/session";
+    const AUTH_LOGOUT_ENDPOINT = "/auth/logout";
 
     const I18N = {
       en: {
         page_title: "Bladephoriafonk",
-        brand_kicker: "Operations Hub",
-        hero_title: "Everything important is one click away",
-        hero_copy: "One simple place for server links, profile access, staff overview and the latest project updates.",
-        hero_copy_long: "Sign in once, jump straight to your profile, review server details, browse the changelog and keep the whole site in your preferred language.",
-        hero_badge: "Fast access",
-        hero_badge_secondary: "Discord powered",
+        home_desc: "This website is suspected to be an Organized Crime Group that manipulates time. Please report any suspicious activity to OVHCloud Staff.",
         language_label: "Language",
         login: "Log in with Discord",
         my_profile: "My profile",
         logout: "Log out",
         nav_server: "Server",
         nav_admin: "Administration",
-        nav_changelog: "Changelog",
-        cta_server: "Open server page",
-        cta_changelog: "Read changelog",
-        auth_status_title: "Quick status",
-        auth_status_guest: "Sign in to unlock your personal profile, faster actions and admin tools where available.",
-        auth_status_user: "Signed in as {name}. You can open your profile immediately.",
-        card_server_title: "Server page",
-        card_server_copy: "Public server snapshots are fetched through the backend, cached safely and refreshed without exposing raw internal files.",
-        card_profile_title: "Profile page",
-        card_profile_copy: "Your profile now has shared assets, clearer public/private controls and a smoother owner flow.",
-        card_updates_title: "Changelog",
-        card_updates_copy: "Admins can create updates with preview support, while visitors get a cleaner timeline and clearer media handling.",
-        metric_secure_title: "Safer by default",
-        metric_secure_copy: "Sensitive folders and dotfiles are no longer meant to be public, and the app now has a safer deployment path for VPS.",
-        metric_easy_title: "Easier to use",
-        metric_easy_copy: "Language selection, login state and common actions are visible immediately instead of being scattered across pages.",
-        metric_stable_title: "More stable",
-        metric_stable_copy: "Profile links stay stable, changelog writes are safer and repeated profile refreshes hit Discord far less aggressively."
+        nav_changelog: "Changelog"
       },
       pl: {
         page_title: "Bladephoriafonk",
-        brand_kicker: "Centrum operacyjne",
-        hero_title: "Wszystko wazne jest o jedno klikniecie stad",
-        hero_copy: "Jedno proste miejsce dla linkow do serwerow, dostepu do profilu, przegladu administracji i najnowszych aktualizacji.",
-        hero_copy_long: "Zaloguj sie raz, przejdz od razu do profilu, sprawdz dane serwerow, przegladnij changelog i korzystaj z calej strony w wybranym jezyku.",
-        hero_badge: "Szybki dostep",
-        hero_badge_secondary: "Napędzane przez Discord",
+        home_desc: "Ta strona jest podejrzewana o dzialanie jako zorganizowana grupa przestepcza manipulujaca czasem. Zglaszaj podejrzane aktywnosci do pracownikow OVHCloud.",
         language_label: "Jezyk",
         login: "Zaloguj sie przez Discord",
         my_profile: "Moj profil",
         logout: "Wyloguj",
         nav_server: "Serwer",
         nav_admin: "Administracja",
-        nav_changelog: "Dziennik zmian",
-        cta_server: "Otworz strone serwerow",
-        cta_changelog: "Czytaj changelog",
-        auth_status_title: "Szybki status",
-        auth_status_guest: "Zaloguj sie, aby odblokowac osobisty profil, szybsze akcje i narzedzia administracyjne tam, gdzie sa dostepne.",
-        auth_status_user: "Zalogowano jako {name}. Mozesz od razu otworzyc swoj profil.",
-        card_server_title: "Strona serwerow",
-        card_server_copy: "Publiczne migawki serwerow sa pobierane przez backend, bezpiecznie cache'owane i odswiezane bez wystawiania wewnetrznych plikow.",
-        card_profile_title: "Strona profilu",
-        card_profile_copy: "Profil ma teraz wspolne assety, czytelniejsze przelaczniki publiczny/prywatny i przyjemniejszy przeplyw dla wlasciciela.",
-        card_updates_title: "Changelog",
-        card_updates_copy: "Administratorzy dostaja tworzenie wpisow z podgladem, a odwiedzajacy czytelniejsza os czasu i lepsza obsluge mediow.",
-        metric_secure_title: "Bezpieczniej domyslnie",
-        metric_secure_copy: "Wrazliwe katalogi i pliki ukryte nie powinny byc juz publiczne, a aplikacja ma bezpieczniejsza sciezke wdrozenia na VPS.",
-        metric_easy_title: "Latwiej w uzyciu",
-        metric_easy_copy: "Wybor jezyka, stan logowania i wspolne akcje sa widoczne od razu zamiast byc rozrzucone po stronach.",
-        metric_stable_title: "Stabilniej",
-        metric_stable_copy: "Linki do profili sa stabilne, zapisy changeloga bezpieczniejsze, a powtarzane odswiezanie profilu znacznie mniej obciaza Discord."
+        nav_changelog: "Dziennik zmian"
       }
     };
 
-    function renderAuthStatus(authControls) {
-      const user = state.session?.user || {};
-      const name = user.global_name || user.username || "Discord";
-      const message = state.session?.authenticated
-        ? window.SiteUi.format(window.SiteLang.translate(I18N, "auth_status_user", window.SiteLang.getLanguage()), { name })
-        : window.SiteLang.translate(I18N, "auth_status_guest", window.SiteLang.getLanguage());
-      authControls.setStatus(message, state.session?.authenticated ? "success" : "info");
+    function applyLanguage(language) {
+      const selected = window.SiteLang.apply(I18N, document, language);
+      const select = document.getElementById("language-select");
+      if (select) {
+        select.value = selected;
+      }
+      document.title = window.SiteLang.translate(I18N, "page_title", selected);
     }
 
-    const authControls = window.SiteUi.initAuthControls({
-      returnTo: "/",
-      statusId: "auth-status",
-      onSession(data) {
-        state.session = data || { authenticated: false };
-        renderAuthStatus(authControls);
+    function initLanguageSelector() {
+      const select = document.getElementById("language-select");
+      if (!select) {
+        return;
       }
-    });
 
-    window.SiteUi.applyLanguage(I18N, {
-      onApplied() {
-        renderAuthStatus(authControls);
+      select.value = window.SiteLang.getLanguage();
+      select.addEventListener("change", () => {
+        const language = window.SiteLang.setLanguage(select.value);
+        applyLanguage(language);
+      });
+
+      window.addEventListener("site-language-change", (event) => {
+        applyLanguage(event.detail && event.detail.language);
+      });
+
+      applyLanguage(window.SiteLang.getLanguage());
+    }
+
+    async function loadSession() {
+      const loginEl = document.getElementById("discord-login");
+      const profileEl = document.getElementById("my-profile");
+      const logoutEl = document.getElementById("discord-logout");
+
+      try {
+        const response = await fetch(AUTH_SESSION_ENDPOINT, {
+          cache: "no-store",
+          credentials: "include"
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.authenticated) {
+          if (loginEl) {
+            loginEl.hidden = false;
+          }
+          if (profileEl) {
+            profileEl.hidden = true;
+          }
+          if (logoutEl) {
+            logoutEl.hidden = true;
+          }
+          return;
+        }
+
+        const profileUrl = data.profile && data.profile.url ? data.profile.url : "/profile/";
+        if (loginEl) {
+          loginEl.hidden = true;
+        }
+        if (profileEl) {
+          profileEl.hidden = false;
+          profileEl.href = profileUrl;
+        }
+        if (logoutEl) {
+          logoutEl.hidden = false;
+        }
+      } catch {
+        if (loginEl) {
+          loginEl.hidden = false;
+        }
+        if (profileEl) {
+          profileEl.hidden = true;
+        }
+        if (logoutEl) {
+          logoutEl.hidden = true;
+        }
       }
-    });
+    }
 
-    authControls.refresh();
+    function initLogout() {
+      const logoutEl = document.getElementById("discord-logout");
+      if (!logoutEl) {
+        return;
+      }
+
+      logoutEl.addEventListener("click", async () => {
+        try {
+          await fetch(AUTH_LOGOUT_ENDPOINT, {
+            method: "POST",
+            credentials: "include"
+          });
+        } catch {
+          // ignore
+        }
+
+        await loadSession();
+      });
+    }
+
+    initLanguageSelector();
+    initLogout();
+    loadSession();
   </script>
 </body>
 </html>

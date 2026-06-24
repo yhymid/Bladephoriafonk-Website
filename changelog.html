@@ -4,31 +4,69 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bladephoriafonk | Changelog</title>
-  <meta name="description" content="Bladephoriafonk changelog with admin post creation and Markdown preview.">
-  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/site.css">
   <style>
-    .timeline-list {
-      display: grid;
-      gap: 14px;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 24px;
     }
-
-    .entry-title {
-      margin: 0 0 8px;
-      font-size: 1.3rem;
+    main {
+      width: min(100%, 980px);
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 26px;
+    }
+    h1 {
+      font-size: clamp(1.8rem, 6vw, 3rem);
+      margin-bottom: 16px;
+    }
+    .top-nav {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .top-nav a {
+      padding: 6px 10px;
+      border: 1px solid #2a2a2a;
+      color: #fff;
+      text-decoration: underline;
+    }
+    .group {
+      border: 1px solid #2a2a2a;
+      background: #050505;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .entry {
+      border-bottom: 1px solid #1f1f1f;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+    .entry:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
+    h2 {
+      font-size: 1.2rem;
+      margin-bottom: 6px;
       overflow-wrap: anywhere;
     }
-
     .entry-content {
-      color: var(--muted-strong);
+      margin-bottom: 10px;
       overflow-wrap: anywhere;
       word-break: break-word;
     }
-
     .entry-content > *:last-child {
       margin-bottom: 0;
     }
-
     .entry-content p,
     .entry-content blockquote,
     .entry-content pre,
@@ -36,234 +74,210 @@
     .entry-content ol,
     .entry-content .md-subtext,
     .entry-content .md-header {
-      margin: 0 0 12px;
+      margin-bottom: 10px;
     }
-
     .entry-content code {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.09);
-      border-radius: 8px;
+      background: #101010;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
       padding: 0.08rem 0.35rem;
-      font-family: var(--font-mono);
       font-size: 0.92em;
+      font-family: "Courier New", monospace;
     }
-
     .entry-content pre {
-      background: rgba(8, 8, 11, 0.92);
-      border: 1px solid rgba(255, 255, 255, 0.09);
-      border-radius: 16px;
-      padding: 14px;
+      background: #0d0d0d;
+      border: 1px solid #262626;
+      border-radius: 10px;
+      padding: 12px;
       overflow-x: auto;
     }
-
     .entry-content pre code {
       background: transparent;
-      border: 0;
+      border: none;
+      border-radius: 0;
       padding: 0;
+      display: block;
       white-space: pre-wrap;
     }
-
     .entry-content blockquote {
-      border-left: 3px solid rgba(115, 214, 255, 0.45);
+      border-left: 3px solid #3a3a3a;
       padding-left: 12px;
-      color: var(--muted);
+      color: #d6d6d6;
     }
-
     .entry-content ul,
     .entry-content ol {
-      padding-left: 22px;
+      padding-left: 24px;
     }
-
     .entry-content li {
       margin-bottom: 6px;
     }
-
-    .entry-content .md-subtext {
-      color: var(--muted);
-      font-size: 0.92rem;
+    .entry-content li:last-child {
+      margin-bottom: 0;
     }
-
+    .entry-content .md-subtext {
+      color: #9e9e9e;
+      font-size: 0.9rem;
+    }
     .entry-content .md-header {
       font-weight: 700;
-      color: var(--text);
+      line-height: 1.25;
     }
-
     .entry-content .md-header.level-1 {
-      font-size: 1.35rem;
+      font-size: 1.3rem;
     }
-
     .entry-content .md-header.level-2 {
-      font-size: 1.18rem;
+      font-size: 1.15rem;
     }
-
     .entry-content .md-header.level-3 {
-      font-size: 1.05rem;
+      font-size: 1.02rem;
     }
-
     .entry-content .md-spoiler {
-      border-radius: 6px;
-      padding: 0 0.22rem;
-      background: rgba(255, 255, 255, 0.1);
+      background: #202020;
+      border-radius: 4px;
       color: transparent;
-      transition: color 0.18s ease;
+      padding: 0 0.2rem;
+      transition: color 0.18s ease, background 0.18s ease;
     }
-
     .entry-content .md-spoiler:hover {
-      color: var(--text);
+      color: #fff;
+      background: #2b2b2b;
     }
-
     .entry-media {
-      margin: 14px 0;
+      margin-bottom: 10px;
     }
-
     .entry-media img,
     .entry-media video {
+      width: min(100%, 620px);
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
       display: block;
-      width: min(100%, 720px);
-      border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.03);
+      background: #0a0a0a;
     }
-
     .entry-meta {
-      margin: 12px 0 0;
-      color: var(--muted);
-      font-size: 0.92rem;
+      font-size: 0.86rem;
+      color: #b7b7b7;
     }
-
+    .admin-panel {
+      margin-bottom: 16px;
+    }
     .admin-panel[hidden] {
       display: none !important;
     }
-
-    .preview-card {
-      padding: 20px;
-      border-radius: 22px;
+    .admin-fields {
+      display: grid;
+      gap: 10px;
+    }
+    .admin-fields label {
+      font-size: 0.92rem;
+      color: #d1d1d1;
+    }
+    .admin-fields input,
+    .admin-fields textarea,
+    .admin-fields select {
+      width: 100%;
+      background: #0f0f0f;
+      color: #fff;
+      border: 1px solid #2c2c2c;
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+    .admin-fields textarea {
+      min-height: 180px;
+      resize: vertical;
+      white-space: pre-wrap;
+    }
+    .markdown-help {
+      font-size: 0.88rem;
+      color: #bdbdbd;
+    }
+    .markdown-help a {
+      color: #fff;
+      text-decoration: underline;
+    }
+    .create-btn {
+      width: fit-content;
+      border: 1px solid #2f2f2f;
+      background: #141414;
+      color: #fff;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .create-btn:hover {
+      background: #1a1a1a;
+    }
+    .create-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .status-note {
+      min-height: 20px;
+      font-size: 0.9rem;
+      color: #d1d1d1;
+    }
+    .status-note.error {
+      color: #ff8080;
+    }
+    .empty-state {
+      color: #c7c7c7;
     }
   </style>
 </head>
 <body>
-  <div class="page-shell">
-    <header class="site-header">
-      <div class="brand-row">
-        <div class="brand-lockup">
-          <p class="brand-kicker" data-i18n="brand_kicker">Project Timeline</p>
-          <h1 class="brand-title" data-i18n="page_heading">Changelog</h1>
-          <p class="brand-subtitle" data-i18n="intro_copy">A cleaner timeline for updates, with a friendlier writing flow for admins.</p>
-        </div>
-
-        <div class="control-cluster">
-          <div class="language-switch">
-            <label for="language-select" data-i18n="language_label">Language</label>
-            <select id="language-select" aria-label="Language selector">
-              <option value="en">English</option>
-              <option value="pl">Polski</option>
-            </select>
-          </div>
-
-          <div class="auth-strip">
-            <a class="btn btn-primary" id="discord-login" href="/auth/discord/login?return_to=/changelog" data-i18n="login">Log in with Discord</a>
-            <a class="btn btn-secondary" id="my-profile" href="/profile/" hidden data-i18n="my_profile">My profile</a>
-            <button class="btn btn-ghost" id="discord-logout" type="button" hidden data-i18n="logout">Log out</button>
-          </div>
-        </div>
-      </div>
-
-      <nav class="pill-nav">
+  <main>
+    <header>
+      <h1 data-i18n="heading">Changelog</h1>
+      <nav class="top-nav">
         <a href="/" data-i18n="nav_home">Home</a>
         <a href="/server" data-i18n="nav_server">Server</a>
         <a href="/administracja" data-i18n="nav_admin">Administration</a>
       </nav>
     </header>
 
-    <section class="section-card">
-      <div class="button-row">
-        <div>
-          <h2 class="section-title" data-i18n="timeline_title">Latest updates</h2>
-          <p class="section-subtitle" data-i18n="timeline_copy">Posts load publicly. Admin-only controls appear automatically after sign-in.</p>
-        </div>
+    <section class="group admin-panel" id="admin-panel" hidden>
+      <h2 data-i18n="create_heading">Create post</h2>
+      <div class="admin-fields">
+        <label for="post-title" data-i18n="field_title">Title (optional)</label>
+        <input id="post-title" type="text" data-i18n-placeholder="field_title_placeholder" placeholder="Post title">
 
-        <button class="btn btn-secondary" id="refresh-posts" type="button" data-i18n="refresh_posts">Refresh posts</button>
-      </div>
+        <label for="post-content" data-i18n="field_content">Message</label>
+        <textarea id="post-content" data-i18n-placeholder="field_content_placeholder" placeholder="Write your update"></textarea>
+        <p class="markdown-help"><a href="https://support.discord.com/hc/en-us/articles/210298617-Markdown-Text-101-Chat-Formatting-Bold-Italic-Underline" target="_blank" rel="noreferrer" data-i18n="markdown_help">Supported formatting: Discord Markdown 101</a></p>
 
-      <p class="status-note" id="auth-status" aria-live="polite"></p>
-      <p class="status-note" id="posts-status"></p>
-    </section>
+        <label for="post-media-url" data-i18n="field_media_url">Media URL (image or video, optional)</label>
+        <input id="post-media-url" type="url" data-i18n-placeholder="field_media_placeholder" placeholder="https://example.com/file.mp4">
 
-    <section class="section-card admin-panel" id="admin-panel" hidden>
-      <div class="button-row">
-        <div>
-          <h2 class="section-title" data-i18n="create_heading">Create post</h2>
-          <p class="section-subtitle" data-i18n="create_copy">Write your update once and check the preview before publishing.</p>
-        </div>
-      </div>
+        <label for="post-media-type" data-i18n="field_media_type">Media type</label>
+        <select id="post-media-type">
+          <option value="" data-i18n="media_auto">Auto detect</option>
+          <option value="image" data-i18n="media_image">Image</option>
+          <option value="video" data-i18n="media_video">Video</option>
+        </select>
 
-      <div class="split-grid" style="margin-top:16px;">
-        <div class="field-grid">
-          <div class="field-block">
-            <label for="post-title" data-i18n="field_title">Title (optional)</label>
-            <input class="field-input" id="post-title" type="text" data-i18n-placeholder="field_title_placeholder" placeholder="Post title">
-          </div>
-
-          <div class="field-block">
-            <label for="post-content" data-i18n="field_content">Message</label>
-            <textarea class="field-textarea" id="post-content" data-i18n-placeholder="field_content_placeholder" placeholder="Write your update"></textarea>
-          </div>
-
-          <div class="field-block">
-            <label for="post-media-url" data-i18n="field_media_url">Media URL (optional)</label>
-            <input class="field-input" id="post-media-url" type="url" data-i18n-placeholder="field_media_placeholder" placeholder="https://example.com/file.mp4">
-          </div>
-
-          <div class="field-block">
-            <label for="post-media-type" data-i18n="field_media_type">Media type</label>
-            <select class="field-select" id="post-media-type">
-              <option value="" data-i18n="media_auto">Auto detect</option>
-              <option value="image" data-i18n="media_image">Image</option>
-              <option value="video" data-i18n="media_video">Video</option>
-            </select>
-          </div>
-
-          <p class="helper-copy"><a href="https://support.discord.com/hc/en-us/articles/210298617-Markdown-Text-101-Chat-Formatting-Bold-Italic-Underline" target="_blank" rel="noopener noreferrer" data-i18n="markdown_help">Supported formatting: Discord Markdown 101</a></p>
-
-          <div class="auth-strip">
-            <button class="btn btn-primary" id="create-post-btn" type="button" data-i18n="create_button">Create</button>
-          </div>
-
-          <p class="status-note" id="create-status" aria-live="polite"></p>
-        </div>
-
-        <div class="preview-card">
-          <div class="button-row">
-            <div>
-              <h3 class="section-title" data-i18n="preview_heading">Live preview</h3>
-              <p class="section-subtitle" data-i18n="preview_copy">This is how your post will appear in the public timeline.</p>
-            </div>
-            <span class="badge" data-tone="info" id="draft-stats">0</span>
-          </div>
-
-          <article class="timeline-entry" style="margin-top:14px;">
-            <h3 class="entry-title" id="preview-title">Untitled post</h3>
-            <div class="entry-content" id="preview-content"></div>
-            <div class="entry-media" id="preview-media"></div>
-            <p class="entry-meta" id="preview-meta"></p>
-          </article>
-        </div>
+        <button class="create-btn" id="create-post-btn" type="button" data-i18n="create_button">Create</button>
+        <p class="status-note" id="create-status"></p>
       </div>
     </section>
 
-    <section class="section-card">
-      <div class="timeline-list" id="posts-list"></div>
+    <section class="group" id="posts-group">
+      <div id="posts-list"></div>
     </section>
-  </div>
+  </main>
 
   <script src="/site-lang.js"></script>
-  <script src="/assets/site-ui.js"></script>
   <script>
+    if (!window.SiteLang) {
+      document.write('<script src="./site-lang.js"><\\/script>');
+    }
+  </script>
+  <script>
+    const AUTH_SESSION_ENDPOINT = "/auth/session";
     const CHANGELOG_ENDPOINT = "/auth/changelog";
-    const REFRESH_INTERVAL_MS = 120 * 1000;
 
     const state = {
-      session: { authenticated: false },
       isAdmin: false,
       posts: []
     };
@@ -271,87 +285,57 @@
     const I18N = {
       en: {
         page_title: "Bladephoriafonk | Changelog",
-        brand_kicker: "Project Timeline",
-        page_heading: "Changelog",
-        intro_copy: "A cleaner timeline for updates, with a friendlier writing flow for admins.",
-        language_label: "Language",
-        login: "Log in with Discord",
-        my_profile: "My profile",
-        logout: "Log out",
+        heading: "Changelog",
         nav_home: "Home",
         nav_server: "Server",
         nav_admin: "Administration",
-        timeline_title: "Latest updates",
-        timeline_copy: "Posts load publicly. Admin-only controls appear automatically after sign-in.",
-        refresh_posts: "Refresh posts",
-        auth_status_guest: "You can read the changelog without logging in.",
-        auth_status_user: "Signed in as {name}. Admin tools will appear automatically if you have access.",
         create_heading: "Create post",
-        create_copy: "Write your update once and check the preview before publishing.",
         field_title: "Title (optional)",
         field_title_placeholder: "Post title",
         field_content: "Message",
         field_content_placeholder: "Write your update",
-        field_media_url: "Media URL (optional)",
+        markdown_help: "Supported formatting: Discord Markdown 101",
+        field_media_url: "Media URL (image or video, optional)",
         field_media_placeholder: "https://example.com/file.mp4",
         field_media_type: "Media type",
         media_auto: "Auto detect",
         media_image: "Image",
         media_video: "Video",
-        markdown_help: "Supported formatting: Discord Markdown 101",
         create_button: "Create",
         creating_button: "Creating...",
-        create_success: "Post created successfully.",
-        create_error: "Could not create the post.",
-        posts_ready: "Changelog loaded successfully.",
-        posts_error: "Could not load the changelog right now.",
+        create_success: "Post created.",
+        create_error: "Could not create post.",
+        read_error: "Could not load changelog.",
         empty_posts: "No posts yet.",
         untitled_post: "Untitled post",
-        post_meta: "By {author} on {date}",
-        preview_heading: "Live preview",
-        preview_copy: "This is how your post will appear in the public timeline."
+        post_meta: "By {author} on {date}"
       },
       pl: {
         page_title: "Bladephoriafonk | Dziennik zmian",
-        brand_kicker: "Os czasu projektu",
-        page_heading: "Dziennik zmian",
-        intro_copy: "Czytelniejsza os czasu dla aktualizacji i wygodniejsze tworzenie wpisow dla administratorow.",
-        language_label: "Jezyk",
-        login: "Zaloguj sie przez Discord",
-        my_profile: "Moj profil",
-        logout: "Wyloguj",
-        nav_home: "Strona glowna",
+        heading: "Dziennik zmian",
+        nav_home: "Strona Glowna",
         nav_server: "Serwer",
         nav_admin: "Administracja",
-        timeline_title: "Najnowsze aktualizacje",
-        timeline_copy: "Wpisy laduja sie publicznie. Narzedzia administratora pojawiaja sie automatycznie po zalogowaniu.",
-        refresh_posts: "Odswiez wpisy",
-        auth_status_guest: "Dziennik zmian mozesz czytac bez logowania.",
-        auth_status_user: "Zalogowano jako {name}. Narzedzia administratora pojawia sie automatycznie, jesli masz dostep.",
         create_heading: "Utworz wpis",
-        create_copy: "Napisz aktualizacje raz i sprawdz podglad przed publikacja.",
         field_title: "Tytul (opcjonalnie)",
         field_title_placeholder: "Tytul wpisu",
         field_content: "Wiadomosc",
         field_content_placeholder: "Napisz aktualizacje",
-        field_media_url: "URL medium (opcjonalnie)",
+        markdown_help: "Obslugiwane formatowanie: Discord Markdown 101",
+        field_media_url: "URL medium (obraz lub wideo, opcjonalnie)",
         field_media_placeholder: "https://example.com/file.mp4",
         field_media_type: "Typ medium",
         media_auto: "Wykryj automatycznie",
         media_image: "Obraz",
         media_video: "Wideo",
-        markdown_help: "Obslugiwane formatowanie: Discord Markdown 101",
         create_button: "Utworz",
         creating_button: "Tworzenie...",
         create_success: "Wpis zostal utworzony.",
         create_error: "Nie udalo sie utworzyc wpisu.",
-        posts_ready: "Dziennik zmian zaladowano poprawnie.",
-        posts_error: "Nie udalo sie teraz zaladowac dziennika zmian.",
+        read_error: "Nie udalo sie zaladowac dziennika zmian.",
         empty_posts: "Brak wpisow.",
         untitled_post: "Wpis bez tytulu",
-        post_meta: "Autor {author}, {date}",
-        preview_heading: "Podglad na zywo",
-        preview_copy: "Tak wpis bedzie wygladal na publicznej osi czasu."
+        post_meta: "Autor {author}, {date}"
       }
     };
 
@@ -360,7 +344,11 @@
     }
 
     function formatMessage(key, params) {
-      return window.SiteUi.format(t(key), params);
+      let template = t(key);
+      Object.entries(params || {}).forEach(([param, value]) => {
+        template = template.replace(`{${param}}`, String(value));
+      });
+      return template;
     }
 
     function formatDate(isoDate) {
@@ -368,8 +356,9 @@
       if (Number.isNaN(date.getTime())) {
         return isoDate || "-";
       }
-      const locale = window.SiteLang.getLanguage() === "pl" ? "pl-PL" : "en-US";
-      return new Intl.DateTimeFormat(locale, {
+
+      const language = window.SiteLang.getLanguage();
+      return new Intl.DateTimeFormat(language === "pl" ? "pl-PL" : "en-US", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -384,8 +373,12 @@
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
+        .replace(/\"/g, "&quot;")
         .replace(/'/g, "&#39;");
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value);
     }
 
     function normalizeHttpUrl(value) {
@@ -420,7 +413,7 @@
         if (!safeUrl) {
           return `[${label}](${url})`;
         }
-        return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${applyInlineFormatting(label)}</a>`;
+        return `<a href="${escapeAttribute(safeUrl)}" target="_blank" rel="noreferrer">${applyInlineFormatting(label)}</a>`;
       });
 
       html = html.replace(/\|\|([\s\S]+?)\|\|/g, "<span class=\"md-spoiler\">$1</span>");
@@ -543,11 +536,11 @@
             break;
           }
           if (
-            currentLine.startsWith(">>> ")
-            || currentLine.startsWith("> ")
-            || /^(#{1,3})\s+(.+)$/.test(currentLine)
-            || /^-#\s+(.+)$/.test(currentLine)
-            || /^(\s*)([-*]|\d+\.)\s+(.+)$/.test(currentLine)
+            currentLine.startsWith(">>> ") ||
+            currentLine.startsWith("> ") ||
+            /^(#{1,3})\s+(.+)$/.test(currentLine) ||
+            /^-#\s+(.+)$/.test(currentLine) ||
+            /^(\s*)([-*]|\d+\.)\s+(.+)$/.test(currentLine)
           ) {
             break;
           }
@@ -587,59 +580,6 @@
       return html || `<p>${escapeHtml(source)}</p>`;
     }
 
-    function renderMedia(container, mediaUrl, mediaType) {
-      if (!container) {
-        return;
-      }
-
-      container.innerHTML = "";
-      if (!mediaUrl) {
-        return;
-      }
-
-      if (mediaType === "video") {
-        const video = document.createElement("video");
-        video.controls = true;
-        video.preload = "metadata";
-        video.src = mediaUrl;
-        container.appendChild(video);
-        return;
-      }
-
-      const image = document.createElement("img");
-      image.src = mediaUrl;
-      image.alt = "Post media";
-      image.loading = "lazy";
-      container.appendChild(image);
-    }
-
-    function setPostsStatus(message, tone) {
-      const status = document.getElementById("posts-status");
-      if (!status) {
-        return;
-      }
-      status.textContent = message || "";
-      status.dataset.tone = tone || "";
-    }
-
-    function setCreateStatus(message, tone) {
-      const status = document.getElementById("create-status");
-      if (!status) {
-        return;
-      }
-      status.textContent = message || "";
-      status.dataset.tone = tone || "";
-    }
-
-    function updateCreateButton(isLoading) {
-      const button = document.getElementById("create-post-btn");
-      if (!button) {
-        return;
-      }
-      button.disabled = Boolean(isLoading);
-      button.textContent = isLoading ? t("creating_button") : t("create_button");
-    }
-
     function renderPosts() {
       const list = document.getElementById("posts-list");
       if (!list) {
@@ -647,6 +587,7 @@
       }
 
       list.innerHTML = "";
+
       if (!Array.isArray(state.posts) || state.posts.length === 0) {
         const empty = document.createElement("p");
         empty.className = "empty-state";
@@ -657,12 +598,11 @@
 
       state.posts.forEach((post) => {
         const article = document.createElement("article");
-        article.className = "timeline-entry";
+        article.className = "entry";
 
-        const title = document.createElement("h2");
-        title.className = "entry-title";
-        title.textContent = (post.title && post.title.trim()) || t("untitled_post");
-        article.appendChild(title);
+        const heading = document.createElement("h2");
+        heading.textContent = (post.title && post.title.trim()) || t("untitled_post");
+        article.appendChild(heading);
 
         const content = document.createElement("div");
         content.className = "entry-content";
@@ -670,10 +610,24 @@
         article.appendChild(content);
 
         if (post.media_url) {
-          const media = document.createElement("div");
-          media.className = "entry-media";
-          renderMedia(media, post.media_url, post.media_type);
-          article.appendChild(media);
+          const mediaWrap = document.createElement("div");
+          mediaWrap.className = "entry-media";
+
+          if (post.media_type === "video") {
+            const video = document.createElement("video");
+            video.controls = true;
+            video.src = post.media_url;
+            video.preload = "metadata";
+            mediaWrap.appendChild(video);
+          } else {
+            const image = document.createElement("img");
+            image.src = post.media_url;
+            image.alt = "Post media";
+            image.loading = "lazy";
+            mediaWrap.appendChild(image);
+          }
+
+          article.appendChild(mediaWrap);
         }
 
         const meta = document.createElement("p");
@@ -681,45 +635,63 @@
         const author = post.created_by && (post.created_by.global_name || post.created_by.username)
           ? (post.created_by.global_name || post.created_by.username)
           : "system";
+
         meta.textContent = formatMessage("post_meta", {
           author,
           date: formatDate(post.created_at)
         });
+
         article.appendChild(meta);
         list.appendChild(article);
       });
     }
 
-    function updatePreview() {
-      const titleInput = document.getElementById("post-title");
-      const contentInput = document.getElementById("post-content");
-      const mediaUrlInput = document.getElementById("post-media-url");
-      const mediaTypeInput = document.getElementById("post-media-type");
-
-      const title = titleInput?.value?.trim() || t("untitled_post");
-      const content = contentInput?.value || "";
-      const mediaUrl = normalizeHttpUrl(mediaUrlInput?.value || "");
-      const mediaType = String(mediaTypeInput?.value || "").toLowerCase();
-      const inferredType = mediaType || (/\.(mp4|webm|ogg|ogv|mov|m4v)(\?|$)/i.test(mediaUrl) ? "video" : "image");
-
-      setText("preview-title", title);
-      const previewContent = document.getElementById("preview-content");
-      if (previewContent) {
-        previewContent.innerHTML = renderMarkdown(content || "");
+    function setCreateStatus(message, isError) {
+      const status = document.getElementById("create-status");
+      if (!status) {
+        return;
       }
 
-      renderMedia(document.getElementById("preview-media"), mediaUrl, mediaUrl ? inferredType : "");
-      setText("preview-meta", formatMessage("post_meta", {
-        author: state.session?.user?.global_name || state.session?.user?.username || "admin",
-        date: formatDate(new Date().toISOString())
-      }));
-      setText("draft-stats", `${content.length}`);
+      status.textContent = message || "";
+      status.classList.toggle("error", Boolean(isError));
     }
 
-    function setText(id, value) {
-      const element = document.getElementById(id);
-      if (element) {
-        element.textContent = value;
+    function applyLanguage() {
+      window.SiteLang.apply(I18N);
+      document.title = t("page_title");
+      renderPosts();
+      updateCreateButton(false);
+    }
+
+    function updateCreateButton(isLoading) {
+      const button = document.getElementById("create-post-btn");
+      if (!button) {
+        return;
+      }
+
+      button.disabled = Boolean(isLoading);
+      button.textContent = isLoading ? t("creating_button") : t("create_button");
+    }
+
+    async function loadSession() {
+      try {
+        const response = await fetch(AUTH_SESSION_ENDPOINT, {
+          cache: "no-store",
+          credentials: "include"
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        state.isAdmin = Boolean(data && data.authenticated && data.is_admin);
+      } catch {
+        state.isAdmin = false;
+      }
+
+      const panel = document.getElementById("admin-panel");
+      if (panel) {
+        panel.hidden = !state.isAdmin;
       }
     }
 
@@ -729,14 +701,14 @@
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
+
         const data = await response.json();
         state.posts = Array.isArray(data.posts) ? data.posts : [];
         renderPosts();
-        setPostsStatus(t("posts_ready"), "success");
       } catch {
         state.posts = [];
         renderPosts();
-        setPostsStatus(t("posts_error"), "danger");
+        setCreateStatus(t("read_error"), true);
       }
     }
 
@@ -751,14 +723,14 @@
       const mediaTypeInput = document.getElementById("post-media-type");
 
       const payload = {
-        title: titleInput?.value || "",
-        content: contentInput?.value || "",
-        media_url: mediaUrlInput?.value || "",
-        media_type: mediaTypeInput?.value || ""
+        title: titleInput ? titleInput.value : "",
+        content: contentInput ? contentInput.value : "",
+        media_url: mediaUrlInput ? mediaUrlInput.value : "",
+        media_type: mediaTypeInput ? mediaTypeInput.value : ""
       };
 
       updateCreateButton(true);
-      setCreateStatus("", "");
+      setCreateStatus("", false);
 
       try {
         const response = await fetch(CHANGELOG_ENDPOINT, {
@@ -775,68 +747,50 @@
           throw new Error(data.error || `HTTP ${response.status}`);
         }
 
-        if (titleInput) titleInput.value = "";
-        if (contentInput) contentInput.value = "";
-        if (mediaUrlInput) mediaUrlInput.value = "";
-        if (mediaTypeInput) mediaTypeInput.value = "";
+        if (contentInput) {
+          contentInput.value = "";
+        }
+        if (titleInput) {
+          titleInput.value = "";
+        }
+        if (mediaUrlInput) {
+          mediaUrlInput.value = "";
+        }
+        if (mediaTypeInput) {
+          mediaTypeInput.value = "";
+        }
 
-        updatePreview();
-        setCreateStatus(t("create_success"), "success");
+        setCreateStatus(t("create_success"), false);
         await loadPosts();
       } catch {
-        setCreateStatus(t("create_error"), "danger");
+        setCreateStatus(t("create_error"), true);
       } finally {
         updateCreateButton(false);
       }
     }
 
-    function renderAuthStatus(authControls) {
-      const user = state.session?.user || {};
-      const name = user.global_name || user.username || "Discord";
-      const message = state.session?.authenticated
-        ? formatMessage("auth_status_user", { name })
-        : t("auth_status_guest");
-      authControls.setStatus(message, state.session?.authenticated ? "success" : "info");
+    function initCreatePost() {
+      const button = document.getElementById("create-post-btn");
+      if (!button) {
+        return;
+      }
+
+      button.addEventListener("click", createPost);
     }
 
-    const authControls = window.SiteUi.initAuthControls({
-      returnTo: "/changelog",
-      statusId: "auth-status",
-      onSession(data) {
-        state.session = data || { authenticated: false };
-        state.isAdmin = Boolean(data && data.authenticated && data.is_admin);
-        document.getElementById("admin-panel").hidden = !state.isAdmin;
-        renderAuthStatus(authControls);
-        updatePreview();
-      }
+    window.addEventListener("site-language-change", () => {
+      applyLanguage();
+      setCreateStatus("", false);
     });
 
-    document.getElementById("refresh-posts")?.addEventListener("click", () => {
-      void loadPosts();
-    });
+    async function bootstrap() {
+      applyLanguage();
+      initCreatePost();
+      await loadSession();
+      await loadPosts();
+    }
 
-    document.getElementById("create-post-btn")?.addEventListener("click", () => {
-      void createPost();
-    });
-
-    ["post-title", "post-content", "post-media-url", "post-media-type"].forEach((id) => {
-      document.getElementById(id)?.addEventListener("input", updatePreview);
-      document.getElementById(id)?.addEventListener("change", updatePreview);
-    });
-
-    window.SiteUi.applyLanguage(I18N, {
-      onApplied() {
-        renderAuthStatus(authControls);
-        renderPosts();
-        updateCreateButton(false);
-        updatePreview();
-      }
-    });
-
-    authControls.refresh();
-    loadPosts();
-    updatePreview();
-    window.SiteUi.attachVisibilityInterval(() => loadPosts(), REFRESH_INTERVAL_MS);
+    bootstrap();
   </script>
 </body>
 </html>

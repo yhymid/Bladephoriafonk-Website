@@ -4,260 +4,278 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bladephoriafonk | Server</title>
-  <meta name="description" content="Public Discord server snapshots for Bladephoriafonk and related groups.">
-  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/site.css">
   <style>
-    .server-list {
-      display: grid;
-      gap: 16px;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 24px;
     }
-
+    main {
+      width: min(100%, 920px);
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 26px;
+    }
+    h1 {
+      font-size: clamp(1.8rem, 6vw, 3rem);
+      margin-bottom: 16px;
+    }
+    .top-nav {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .top-nav a {
+      color: #fff;
+      text-decoration: underline;
+      padding: 6px 10px;
+      border: 1px solid #2a2a2a;
+    }
+    .intro {
+      margin-bottom: 18px;
+      text-align: center;
+    }
     .server-card {
-      display: grid;
-      gap: 16px;
+      border: 1px solid #2a2a2a;
+      background: #050505;
+      padding: 18px;
+      margin-bottom: 18px;
     }
-
     .server-head {
       display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: flex-start;
-    }
-
-    .server-brand {
-      display: flex;
-      gap: 14px;
       align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .server-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       min-width: 0;
     }
-
     .server-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 18px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid #2f2f2f;
+      background: #111;
       object-fit: cover;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      flex: 0 0 52px;
-    }
-
-    .server-brand h2 {
-      margin: 0 0 4px;
-      font-size: 1.25rem;
-    }
-
-    .server-summary {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    .server-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .server-metrics {
-      display: grid;
-      gap: 12px;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .metric-box {
-      padding: 14px;
-      border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.03);
-    }
-
-    .metric-box strong {
       display: block;
+      flex: 0 0 38px;
+    }
+    h2 {
+      font-size: 1.3rem;
+    }
+    .toggle-btn {
+      background: #000;
+      color: #fff;
+      border: 1px solid #3a3a3a;
+      padding: 8px 12px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .links p {
       margin-bottom: 6px;
-      color: var(--muted-strong);
     }
-
-    .metric-box span {
-      font-size: 1.05rem;
+    .links strong {
+      display: inline-block;
+      min-width: 150px;
     }
-
-    .server-detail {
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      padding-top: 16px;
+    .profile {
+      margin-top: 14px;
+      border-top: 1px solid #262626;
+      padding-top: 12px;
     }
-
-    .server-detail[hidden] {
-      display: none !important;
+    .profile-list {
+      list-style: none;
+      margin: 8px 0 0 0;
+      padding: 0;
     }
-
-    .server-detail p {
-      margin: 0 0 12px;
-      color: var(--muted);
-      line-height: 1.6;
+    .profile-list li {
+      display: grid;
+      grid-template-columns: minmax(180px, 230px) 1fr;
+      column-gap: 12px;
+      align-items: start;
+      margin-bottom: 8px;
     }
-
-    .server-detail p:last-child {
-      margin-bottom: 0;
+    .profile-list strong {
+      min-width: 0;
     }
-
-    @media (max-width: 820px) {
-      .server-metrics {
+    .profile-list span,
+    .profile-list a {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    @media (max-width: 720px) {
+      .profile-list li {
         grid-template-columns: 1fr;
+        row-gap: 2px;
       }
+    }
+    .status {
+      margin: 8px 0 10px 0;
+      font-size: 0.95rem;
+      color: #cfcfcf;
+    }
+    .status.error {
+      color: #ff8080;
+    }
+    a {
+      color: #fff;
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <div class="page-shell">
-    <header class="site-header">
-      <div class="brand-row">
-        <div class="brand-lockup">
-          <p class="brand-kicker" data-i18n="brand_kicker">Live Server Snapshot</p>
-          <h1 class="brand-title" data-i18n="page_heading">Server</h1>
-          <p class="brand-subtitle" data-i18n="intro">Public Discord server data is now fetched through the backend, cached safely and refreshed only when needed.</p>
-        </div>
-
-        <div class="control-cluster">
-          <div class="language-switch">
-            <label for="language-select" data-i18n="language_label">Language</label>
-            <select id="language-select" aria-label="Language selector">
-              <option value="en">English</option>
-              <option value="pl">Polski</option>
-            </select>
-          </div>
-
-          <div class="auth-strip">
-            <a class="btn btn-primary" id="discord-login" href="/auth/discord/login?return_to=/server" data-i18n="login">Log in with Discord</a>
-            <a class="btn btn-secondary" id="my-profile" href="/profile/" hidden data-i18n="my_profile">My profile</a>
-            <button class="btn btn-ghost" id="discord-logout" type="button" hidden data-i18n="logout">Log out</button>
-          </div>
-        </div>
-      </div>
-
-      <nav class="pill-nav">
+  <main>
+    <header>
+      <h1 data-i18n="heading">Server</h1>
+      <nav class="top-nav">
         <a href="/" data-i18n="nav_home">Home</a>
         <a href="/administracja" data-i18n="nav_admin">Administration</a>
         <a href="/changelog" data-i18n="nav_changelog">Changelog</a>
       </nav>
     </header>
 
-    <section class="section-card">
-      <div class="button-row">
-        <div>
-          <h2 class="section-title" data-i18n="section_title">Public server overview</h2>
-          <p class="section-subtitle" data-i18n="section_copy">Refresh happens automatically while the page is visible. Manual refresh is available if you need an instant update.</p>
+    <p class="intro" data-i18n="intro">List of Discord servers and profile information based on public invite data. Data refreshes every 60 seconds.</p>
+
+    <section class="server-card">
+      <div class="server-head">
+        <div class="server-title">
+          <img class="server-icon" id="blade-icon" alt="Bladephoriafonk logo">
+          <h2>Bladephoriafonk</h2>
         </div>
-
-        <button class="btn btn-secondary" id="refresh-servers" type="button" data-i18n="refresh_button">Refresh now</button>
+        <button class="toggle-btn" data-target="blade-profile" aria-expanded="false" data-i18n="show_profile">Show server profile</button>
       </div>
-
-      <p class="status-note" id="auth-status" aria-live="polite"></p>
-      <p class="status-note" id="server-status" aria-live="polite"></p>
+      <div class="links">
+        <p><strong data-i18n="main_url">Main URL:</strong> <a href="https://discord.gg/bladephoriafonk">https://discord.gg/bladephoriafonk</a></p>
+        <p><strong data-i18n="alt_url">Alternative URL:</strong> <a href="https://discord.gg/6bcWUDa9pE">https://discord.gg/6bcWUDa9pE</a></p>
+      </div>
+      <p class="status" id="blade-status" data-i18n="status_loading">Status: loading...</p>
+      <div class="profile" id="blade-profile" hidden>
+        <ul class="profile-list">
+          <li><strong data-i18n="label_server_id">Server ID:</strong> <span id="blade-id">-</span></li>
+          <li><strong data-i18n="label_members">Estimated members:</strong> <span id="blade-members">-</span></li>
+          <li><strong data-i18n="label_online">Estimated online:</strong> <span id="blade-online">-</span></li>
+          <li><strong data-i18n="label_verification">Verification level:</strong> <span id="blade-verification">-</span></li>
+          <li><strong data-i18n="label_boost">Boost level:</strong> <span id="blade-boost">-</span></li>
+          <li><strong data-i18n="label_description">Server description:</strong> <span id="blade-description">-</span></li>
+          <li><strong data-i18n="label_updated">Last update:</strong> <span id="blade-updated">-</span></li>
+          <li><strong data-i18n="label_source">Data source:</strong> <a id="blade-source" href="https://discord.com/api/v9/invites/bladephoriafonk?with_counts=true&with_expiration=true">Discord Invite API</a></li>
+        </ul>
+      </div>
     </section>
 
-    <div class="server-list" id="server-list"></div>
-  </div>
+    <section class="server-card">
+      <div class="server-head">
+        <div class="server-title">
+          <img class="server-icon" id="pmc-icon" alt="PMC Ashley Group logo">
+          <h2>PMC Ashley Group</h2>
+        </div>
+        <button class="toggle-btn" data-target="pmc-profile" aria-expanded="false" data-i18n="show_profile">Show server profile</button>
+      </div>
+      <div class="links">
+        <p><strong data-i18n="main_url">Main URL:</strong> <a href="https://discord.gg/2upsTHV5Bv">https://discord.gg/2upsTHV5Bv</a></p>
+      </div>
+      <p class="status" id="pmc-status" data-i18n="status_loading">Status: loading...</p>
+      <div class="profile" id="pmc-profile" hidden>
+        <ul class="profile-list">
+          <li><strong data-i18n="label_server_id">Server ID:</strong> <span id="pmc-id">-</span></li>
+          <li><strong data-i18n="label_members">Estimated members:</strong> <span id="pmc-members">-</span></li>
+          <li><strong data-i18n="label_online">Estimated online:</strong> <span id="pmc-online">-</span></li>
+          <li><strong data-i18n="label_verification">Verification level:</strong> <span id="pmc-verification">-</span></li>
+          <li><strong data-i18n="label_boost">Boost level:</strong> <span id="pmc-boost">-</span></li>
+          <li><strong data-i18n="label_description">Server description:</strong> <span id="pmc-description">-</span></li>
+          <li><strong data-i18n="label_updated">Last update:</strong> <span id="pmc-updated">-</span></li>
+          <li><strong data-i18n="label_source">Data source:</strong> <a id="pmc-source" href="https://discord.com/api/v9/invites/2upsTHV5Bv?with_counts=true&with_expiration=true">Discord Invite API</a></li>
+        </ul>
+      </div>
+    </section>
+  </main>
 
   <script src="/site-lang.js"></script>
-  <script src="/assets/site-ui.js"></script>
+  <script>
+    if (!window.SiteLang) {
+      document.write('<script src="./site-lang.js"><\\/script>');
+    }
+  </script>
   <script>
     const SERVER_DATA_ENDPOINT = "/auth/server-data";
     const REFRESH_INTERVAL_MS = 60 * 1000;
-
-    const state = {
-      session: { authenticated: false },
-      servers: [],
-      expanded: new Set()
-    };
+    const SERVER_ORDER = ["blade", "pmc"];
 
     const I18N = {
       en: {
         page_title: "Bladephoriafonk | Server",
-        brand_kicker: "Live Server Snapshot",
-        page_heading: "Server",
-        intro: "Public Discord server data is now fetched through the backend, cached safely and refreshed only when needed.",
-        language_label: "Language",
-        login: "Log in with Discord",
-        my_profile: "My profile",
-        logout: "Log out",
+        heading: "Server",
         nav_home: "Home",
         nav_admin: "Administration",
         nav_changelog: "Changelog",
-        section_title: "Public server overview",
-        section_copy: "Refresh happens automatically while the page is visible. Manual refresh is available if you need an instant update.",
-        refresh_button: "Refresh now",
-        auth_status_guest: "You can browse the server data without logging in.",
-        auth_status_user: "Signed in as {name}. Your profile button is ready.",
-        status_loading: "Loading server data...",
-        status_ready: "Server data is up to date.",
-        status_partial: "Some servers are using cached data because a live refresh failed.",
-        status_error: "Could not load server data right now.",
-        status_empty: "No server data is available yet.",
-        open_details: "Show details",
-        close_details: "Hide details",
-        main_url: "Main invite",
-        alt_url: "Alternative invite",
-        data_source: "Data source",
-        label_members: "Estimated members",
-        label_online: "Estimated online",
-        label_boost: "Boost level",
+        intro: "List of Discord servers and profile information based on public invite data. Data refreshes every 60 seconds.",
+        show_profile: "Show server profile",
+        hide_profile: "Hide server profile",
+        main_url: "Main URL:",
+        alt_url: "Alternative URL:",
         label_server_id: "Server ID:",
+        label_members: "Estimated members:",
+        label_online: "Estimated online:",
         label_verification: "Verification level:",
-        label_description: "Description:",
+        label_boost: "Boost level:",
+        label_description: "Server description:",
         label_updated: "Last update:",
+        label_source: "Data source:",
+        status_loading: "Status: loading...",
+        status_current: "Status: up to date",
+        status_cached: "Status: cached data shown",
+        status_error_prefix: "Status: refresh failed",
+        no_description: "No description",
+        tier_format: "Tier {tier} ({boosts} boosts)",
         verification_none: "0 (None)",
         verification_low: "1 (Low)",
         verification_medium: "2 (Medium)",
         verification_high: "3 (High)",
-        verification_very_high: "4 (Very High)",
-        no_description: "No description",
-        tier_format: "Tier {tier} ({boosts} boosts)",
-        server_error: "Refresh failed for this server."
+        verification_very_high: "4 (Very High)"
       },
       pl: {
         page_title: "Bladephoriafonk | Serwer",
-        brand_kicker: "Migawka serwerow na zywo",
-        page_heading: "Serwer",
-        intro: "Publiczne dane Discord sa teraz pobierane przez backend, bezpiecznie cache'owane i odswiezane tylko wtedy, kiedy trzeba.",
-        language_label: "Jezyk",
-        login: "Zaloguj sie przez Discord",
-        my_profile: "Moj profil",
-        logout: "Wyloguj",
-        nav_home: "Strona glowna",
+        heading: "Serwer",
+        nav_home: "Strona Glowna",
         nav_admin: "Administracja",
         nav_changelog: "Dziennik zmian",
-        section_title: "Publiczny przeglad serwerow",
-        section_copy: "Odswiezanie dzieje sie automatycznie, gdy strona jest widoczna. W razie potrzeby mozesz wymusic aktualizacje recznie.",
-        refresh_button: "Odswiez teraz",
-        auth_status_guest: "Dane serwerow mozesz przegladac bez logowania.",
-        auth_status_user: "Zalogowano jako {name}. Przycisk profilu jest gotowy.",
-        status_loading: "Ladowanie danych serwerow...",
-        status_ready: "Dane serwerow sa aktualne.",
-        status_partial: "Czesc serwerow korzysta z danych z cache, bo odswiezenie na zywo sie nie powiodlo.",
-        status_error: "Nie udalo sie teraz zaladowac danych serwerow.",
-        status_empty: "Brak dostepnych danych serwerow.",
-        open_details: "Pokaz szczegoly",
-        close_details: "Ukryj szczegoly",
-        main_url: "Glowne zaproszenie",
-        alt_url: "Alternatywne zaproszenie",
-        data_source: "Zrodlo danych",
-        label_members: "Szacunkowa liczba czlonkow",
-        label_online: "Szacunkowo online",
-        label_boost: "Poziom boosta",
+        intro: "Lista serwerow Discord i informacji profilowych opartych o publiczne dane zaproszen. Dane odswiezaja sie co 60 sekund.",
+        show_profile: "Pokaz profil serwera",
+        hide_profile: "Ukryj profil serwera",
+        main_url: "Glowny URL:",
+        alt_url: "Alternatywny URL:",
         label_server_id: "ID serwera:",
+        label_members: "Szacunkowa liczba czlonkow:",
+        label_online: "Szacunkowo online:",
         label_verification: "Poziom weryfikacji:",
-        label_description: "Opis:",
+        label_boost: "Poziom boost:",
+        label_description: "Opis serwera:",
         label_updated: "Ostatnia aktualizacja:",
+        label_source: "Zrodlo danych:",
+        status_loading: "Status: ladowanie...",
+        status_current: "Status: aktualne",
+        status_cached: "Status: pokazano dane z cache",
+        status_error_prefix: "Status: blad aktualizacji",
+        no_description: "Brak opisu",
+        tier_format: "Tier {tier} ({boosts} boostow)",
         verification_none: "0 (Brak)",
         verification_low: "1 (Niski)",
         verification_medium: "2 (Sredni)",
         verification_high: "3 (Wysoki)",
-        verification_very_high: "4 (Bardzo wysoki)",
-        no_description: "Brak opisu",
-        tier_format: "Tier {tier} ({boosts} boostow)",
-        server_error: "Odswiezenie tego serwera nie powiodlo sie."
+        verification_very_high: "4 (Bardzo wysoki)"
       }
     };
 
@@ -266,26 +284,20 @@
     }
 
     function formatMessage(key, params) {
-      return window.SiteUi.format(t(key), params);
+      let template = t(key);
+      Object.entries(params || {}).forEach(([param, value]) => {
+        template = template.replace(`{${param}}`, String(value));
+      });
+      return template;
     }
 
-    function currentLocale() {
-      return window.SiteLang.getLanguage() === "pl" ? "pl-PL" : "en-US";
-    }
-
-    function formatNumber(value) {
-      return new Intl.NumberFormat(currentLocale()).format(Number(value || 0));
-    }
-
-    function formatDate(value) {
-      if (!value) {
-        return "-";
-      }
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) {
-        return value;
-      }
-      return date.toLocaleString(currentLocale());
+    function applyLanguage() {
+      window.SiteLang.apply(I18N);
+      document.title = t("page_title");
+      document.querySelectorAll(".toggle-btn").forEach((button) => {
+        const expanded = button.getAttribute("aria-expanded") === "true";
+        button.textContent = expanded ? t("hide_profile") : t("show_profile");
+      });
     }
 
     function verificationLabel(level) {
@@ -296,230 +308,146 @@
         3: t("verification_high"),
         4: t("verification_very_high")
       };
-      return Object.prototype.hasOwnProperty.call(labels, level) ? labels[level] : String(level ?? "-");
+      return labels[level] || String(level ?? "-");
     }
 
-    function setStatus(message, tone) {
-      const element = document.getElementById("server-status");
-      if (!element) {
-        return;
+    function setValue(key, field, value) {
+      const element = document.getElementById(`${key}-${field}`);
+      if (element) {
+        element.textContent = value;
       }
-      element.textContent = message || "";
-      element.dataset.tone = tone || "";
     }
 
-    function createMetric(label, value) {
-      const card = document.createElement("div");
-      card.className = "metric-box";
-
-      const strong = document.createElement("strong");
-      strong.textContent = label;
-
-      const span = document.createElement("span");
-      span.textContent = value;
-
-      card.appendChild(strong);
-      card.appendChild(span);
-      return card;
+    function setSourceLink(key, value) {
+      const element = document.getElementById(`${key}-source`);
+      if (element && value) {
+        element.href = value;
+      }
     }
 
-    function createLinkButton(label, href, typeClass = "btn btn-secondary") {
-      const link = document.createElement("a");
-      link.className = typeClass;
-      link.href = href;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = label;
-      return link;
+    function setIcon(key, url) {
+      const element = document.getElementById(`${key}-icon`);
+      if (element && url) {
+        element.src = url;
+      }
     }
 
-    function renderServers() {
-      const list = document.getElementById("server-list");
-      if (!list) {
-        return;
+    function formatDate(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return "-";
       }
 
-      list.innerHTML = "";
+      return new Intl.DateTimeFormat(window.SiteLang.getLanguage() === "pl" ? "pl-PL" : "en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      }).format(date);
+    }
 
-      if (!state.servers.length) {
-        const empty = document.createElement("section");
-        empty.className = "section-card";
-        const message = document.createElement("p");
-        message.className = "empty-state";
-        message.textContent = t("status_empty");
-        empty.appendChild(message);
-        list.appendChild(empty);
+    function applyServer(server) {
+      const key = server.key;
+      const statusElement = document.getElementById(`${key}-status`);
+      const description = server.description || t("no_description");
+
+      setValue(key, "id", server.guild_id || "-");
+      setValue(key, "members", String(server.member_count ?? "-"));
+      setValue(key, "online", String(server.online_count ?? "-"));
+      setValue(key, "verification", verificationLabel(server.verification_level));
+      setValue(key, "boost", formatMessage("tier_format", {
+        tier: server.premium_tier ?? 0,
+        boosts: server.premium_subscription_count ?? 0
+      }));
+      setValue(key, "description", description);
+      setValue(key, "updated", formatDate(server.updated_at));
+      setSourceLink(key, server.source_url);
+      setIcon(key, server.icon_url);
+
+      if (!statusElement) {
         return;
       }
 
-      state.servers.forEach((server) => {
-        const section = document.createElement("section");
-        section.className = "section-card server-card";
+      if (server.error && !server.cached) {
+        statusElement.textContent = `${t("status_error_prefix")} (${server.error})`;
+        statusElement.classList.add("error");
+        return;
+      }
 
-        const head = document.createElement("div");
-        head.className = "server-head";
-
-        const brand = document.createElement("div");
-        brand.className = "server-brand";
-
-        const icon = document.createElement("img");
-        icon.className = "server-icon";
-        icon.alt = `${server.name} logo`;
-        icon.src = server.icon_url || "/assets/favicon.svg";
-
-        const brandText = document.createElement("div");
-        const title = document.createElement("h2");
-        title.textContent = server.name;
-
-        const summary = document.createElement("p");
-        summary.className = "server-summary";
-        summary.textContent = server.description || t("no_description");
-
-        brandText.appendChild(title);
-        brandText.appendChild(summary);
-        brand.appendChild(icon);
-        brand.appendChild(brandText);
-
-        const headActions = document.createElement("div");
-        headActions.className = "server-actions";
-
-        const tone = server.error && !server.updated_at ? "danger" : (server.stale ? "warning" : "success");
-        const badge = document.createElement("span");
-        badge.className = "status-pill";
-        badge.dataset.tone = tone;
-        badge.textContent = server.error && !server.updated_at ? t("server_error") : (server.stale ? t("status_partial") : t("status_ready"));
-
-        const toggleButton = document.createElement("button");
-        toggleButton.className = "btn btn-secondary";
-        toggleButton.type = "button";
-        toggleButton.textContent = state.expanded.has(server.key) ? t("close_details") : t("open_details");
-        toggleButton.addEventListener("click", () => {
-          if (state.expanded.has(server.key)) {
-            state.expanded.delete(server.key);
-          } else {
-            state.expanded.add(server.key);
-          }
-          renderServers();
-        });
-
-        headActions.appendChild(badge);
-        headActions.appendChild(toggleButton);
-
-        head.appendChild(brand);
-        head.appendChild(headActions);
-
-        const links = document.createElement("div");
-        links.className = "server-actions";
-        links.appendChild(createLinkButton(t("main_url"), server.main_url, "btn btn-primary"));
-        if (server.alt_url) {
-          links.appendChild(createLinkButton(t("alt_url"), server.alt_url));
-        }
-        links.appendChild(createLinkButton(t("data_source"), server.source_url));
-
-        const metrics = document.createElement("div");
-        metrics.className = "server-metrics";
-        metrics.appendChild(createMetric(t("label_members"), formatNumber(server.member_count)));
-        metrics.appendChild(createMetric(t("label_online"), formatNumber(server.online_count)));
-        metrics.appendChild(createMetric(t("label_boost"), formatMessage("tier_format", {
-          tier: server.premium_tier ?? 0,
-          boosts: server.premium_subscription_count ?? 0
-        })));
-
-        const detail = document.createElement("div");
-        detail.className = "server-detail";
-        detail.hidden = !state.expanded.has(server.key);
-
-        const detailLines = [
-          `${t("label_server_id")} ${server.guild_id || "-"}`,
-          `${t("label_verification")} ${verificationLabel(server.verification_level)}`,
-          `${t("label_description")} ${server.description || t("no_description")}`,
-          `${t("label_updated")} ${formatDate(server.updated_at)}`
-        ];
-
-        detailLines.forEach((line) => {
-          const paragraph = document.createElement("p");
-          paragraph.textContent = line;
-          detail.appendChild(paragraph);
-        });
-
-        section.appendChild(head);
-        section.appendChild(links);
-        section.appendChild(metrics);
-        section.appendChild(detail);
-        list.appendChild(section);
-      });
+      statusElement.textContent = server.stale ? t("status_cached") : t("status_current");
+      statusElement.classList.toggle("error", Boolean(server.stale && server.error));
     }
 
-    async function loadServers(options = {}) {
-      setStatus(t("status_loading"), "info");
+    async function refreshAll(force) {
+      const query = force ? "?refresh=1" : "";
 
       try {
-        const query = options.force ? "?refresh=1" : "";
         const response = await fetch(`${SERVER_DATA_ENDPOINT}${query}`, { cache: "no-store" });
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
 
         const data = await response.json();
-        state.servers = Array.isArray(data.servers) ? data.servers : [];
-        renderServers();
+        const servers = Array.isArray(data.servers) ? data.servers : [];
+        const byKey = new Map(servers.map((server) => [server.key, server]));
 
-        const hasError = state.servers.some((server) => server.error && !server.updated_at);
-        const hasStale = state.servers.some((server) => server.stale);
+        SERVER_ORDER.forEach((key) => {
+          const server = byKey.get(key);
+          const statusElement = document.getElementById(`${key}-status`);
 
-        if (hasError) {
-          setStatus(t("status_error"), "danger");
-        } else if (hasStale) {
-          setStatus(t("status_partial"), "warning");
-        } else {
-          setStatus(t("status_ready"), "success");
+          if (!server) {
+            if (statusElement) {
+              statusElement.textContent = `${t("status_error_prefix")} (missing_data)`;
+              statusElement.classList.add("error");
+            }
+            return;
+          }
+
+          applyServer(server);
+        });
+      } catch (error) {
+        SERVER_ORDER.forEach((key) => {
+          const statusElement = document.getElementById(`${key}-status`);
+          if (statusElement) {
+            statusElement.textContent = `${t("status_error_prefix")} (${error.message})`;
+            statusElement.classList.add("error");
+          }
+        });
+      }
+    }
+
+    document.querySelectorAll(".toggle-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = document.getElementById(button.dataset.target);
+        if (!target) {
+          return;
         }
-      } catch {
-        state.servers = [];
-        renderServers();
-        setStatus(t("status_error"), "danger");
-      }
-    }
 
-    function renderAuthStatus(authControls) {
-      const user = state.session?.user || {};
-      const name = user.global_name || user.username || "Discord";
-      const message = state.session?.authenticated
-        ? formatMessage("auth_status_user", { name })
-        : t("auth_status_guest");
-      authControls.setStatus(message, state.session?.authenticated ? "success" : "info");
-    }
-
-    const authControls = window.SiteUi.initAuthControls({
-      returnTo: "/server",
-      statusId: "auth-status",
-      onSession(data) {
-        state.session = data || { authenticated: false };
-        renderAuthStatus(authControls);
-      }
+        const isHidden = target.hasAttribute("hidden");
+        if (isHidden) {
+          target.removeAttribute("hidden");
+          button.textContent = t("hide_profile");
+          button.setAttribute("aria-expanded", "true");
+        } else {
+          target.setAttribute("hidden", "");
+          button.textContent = t("show_profile");
+          button.setAttribute("aria-expanded", "false");
+        }
+      });
     });
 
-    document.getElementById("refresh-servers")?.addEventListener("click", async (event) => {
-      const button = event.currentTarget;
-      if (!(button instanceof HTMLButtonElement)) {
-        return;
-      }
-
-      button.disabled = true;
-      await loadServers({ force: true });
-      button.disabled = false;
+    window.addEventListener("site-language-change", () => {
+      applyLanguage();
+      refreshAll(false);
     });
 
-    window.SiteUi.applyLanguage(I18N, {
-      onApplied() {
-        renderAuthStatus(authControls);
-        renderServers();
-      }
-    });
-
-    authControls.refresh();
-    loadServers();
-    window.SiteUi.attachVisibilityInterval(() => loadServers(), REFRESH_INTERVAL_MS);
+    applyLanguage();
+    refreshAll(false);
+    setInterval(() => {
+      refreshAll(false);
+    }, REFRESH_INTERVAL_MS);
   </script>
 </body>
 </html>

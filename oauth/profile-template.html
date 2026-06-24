@@ -1,122 +1,1085 @@
 <!doctype html>
-<html lang="en">
+<html lang="pl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bladephoriafonk | Profile</title>
-  <meta name="description" content="Bladephoriafonk profile page powered by Discord OAuth.">
-  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/site.css">
-  <link rel="stylesheet" href="/assets/profile.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 24px;
+    }
+
+    main {
+      width: min(100%, 980px);
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    main[hidden] {
+      display: none !important;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 6vw, 3rem);
+      margin-bottom: 12px;
+    }
+
+    .top-nav {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .top-nav a {
+      color: #fff;
+      text-decoration: underline;
+      border: 1px solid #2c2c2c;
+      padding: 6px 10px;
+    }
+
+    .profile-art-wrap {
+      border: 1px solid #252525;
+      background: #0b0b0b;
+      margin-bottom: 14px;
+      border-radius: 10px;
+      overflow: hidden;
+      min-height: 160px;
+      max-height: 240px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      border: 1px solid #2a2a2a;
+      background: #050505;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .profile-art-image {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .profile-art-fallback {
+      color: #d7d7d7;
+      font-size: 0.92rem;
+      letter-spacing: 0.02em;
+      text-align: center;
+      padding: 10px 12px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .avatar {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 1px solid #2f2f2f;
+      object-fit: cover;
+      background: #111;
+      flex: 0 0 88px;
+    }
+
+    h2 {
+      font-size: 1.45rem;
+      margin-bottom: 2px;
+    }
+
+    .muted {
+      color: #cbcbcb;
+      font-size: 0.95rem;
+    }
+
+    .owner-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .owner-controls[hidden] {
+      display: none !important;
+    }
+
+    .action-btn {
+      border: 1px solid #323232;
+      color: #fff;
+      background: #141414;
+      border-radius: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+      font-size: 0.92rem;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .action-btn:hover {
+      background: #1d1d1d;
+    }
+
+    .action-btn.secondary {
+      background: #101010;
+      border-color: #2a2a2a;
+      color: #cfcfcf;
+    }
+
+    .action-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .panel {
+      border: 1px solid #232323;
+      background: #080808;
+      padding: 12px;
+    }
+
+    .panel h3 {
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+    }
+
+    .kv {
+      list-style: none;
+    }
+
+    .kv li {
+      margin-bottom: 6px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .kv strong {
+      display: inline-block;
+      min-width: 145px;
+    }
+
+    .connection-icons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .connection-pill {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #2d2d2d;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      font-size: 0.95rem;
+      background: #111;
+      color: #efefef;
+      text-transform: uppercase;
+      overflow: hidden;
+    }
+
+    .connection-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .connection-card {
+      border: 1px solid #2b2b2b;
+      border-radius: 8px;
+      background: #111;
+      padding: 10px;
+    }
+
+    .connection-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+
+    .connection-type {
+      color: #bcbcbc;
+      font-size: 0.87rem;
+      text-transform: capitalize;
+    }
+
+    .connection-meta {
+      color: #bcbcbc;
+      font-size: 0.85rem;
+    }
+
+    .empty-note {
+      border: 1px solid #262626;
+      background: #0a0a0a;
+      border-radius: 8px;
+      padding: 12px;
+      color: #c8c8c8;
+      margin-top: 10px;
+    }
+
+    .meta {
+      font-size: 0.84rem;
+      color: #a9a9a9;
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    .public-state {
+      min-height: calc(100vh - 48px);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .public-state[hidden] {
+      display: none !important;
+    }
+
+    .public-state-card {
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+    }
+
+    .public-state-message {
+      font-size: clamp(1.2rem, 4vw, 2rem);
+      color: #fff;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .meta {
+        text-align: left;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="page-shell profile-page">
-    <header class="site-header site-header--compact">
-      <div class="brand-row">
-        <div class="brand-lockup">
-          <p class="brand-kicker" data-i18n="brand_kicker">Discord Profile Hub</p>
-          <h1 class="brand-title" data-i18n="page_heading">Profile</h1>
-          <p class="brand-subtitle" data-i18n="intro_copy">Your Discord profile, public connections and quick account actions live here.</p>
-        </div>
-
-        <div class="control-cluster">
-          <div class="language-switch">
-            <label for="language-select" data-i18n="language_label">Language</label>
-            <select id="language-select" aria-label="Language selector">
-              <option value="en">English</option>
-              <option value="pl">Polski</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <nav class="pill-nav">
-        <a href="/" data-i18n="nav_home">Home</a>
-        <a href="/server" data-i18n="nav_server">Server</a>
-        <a href="/administracja" data-i18n="nav_admin">Administration</a>
-        <a href="/changelog" data-i18n="nav_changelog">Changelog</a>
+  <main id="profile-main" hidden>
+      <header>
+        <h1 id="page-heading">Profile</h1>
+        <nav class="top-nav" id="top-nav" aria-label="Main navigation">
+          <a id="nav-home" href="/">Home</a>
+        <a id="nav-server" href="/server">Server</a>
+        <a id="nav-admin" href="/administracja">Administration</a>
+        <a id="nav-changelog" href="/changelog">Changelog</a>
       </nav>
     </header>
 
-    <main id="profile-main" hidden>
-      <section class="section-card">
-        <div class="profile-banner" id="profile-banner">
-          <img id="profile-banner-image" hidden alt="">
-          <div class="profile-banner-fallback" id="profile-banner-fallback" data-i18n="no_banner">No Discord banner available</div>
+    <section class="card">
+      <div
+        class="profile-art-wrap"
+        id="profile-art-wrap"
+        style="min-height:220px;display:flex;align-items:center;justify-content:center;background:#0b0b0b;"
+      >
+        <img class="profile-art-image" id="profile-art-image" alt="Profile banner">
+        <div class="profile-art-fallback" id="profile-art-fallback">No Discord banner</div>
+      </div>
+
+      <div class="hero">
+        <img class="avatar" id="avatar" alt="Profile avatar" src="https://cdn.discordapp.com/embed/avatars/0.png">
+        <div>
+          <h2 id="display-name">Your profile</h2>
+          <p class="muted" id="username">@uzytkownik</p>
         </div>
+      </div>
 
-        <div class="profile-identity-row">
-          <img class="profile-avatar" id="profile-avatar" alt="Profile avatar" src="https://cdn.discordapp.com/embed/avatars/0.png">
+      <div class="owner-controls" id="owner-controls" hidden></div>
 
-          <div class="profile-identity">
-            <div class="kicker-row">
-              <span class="tag" id="profile-mode-indicator" data-tone="warning">Private profile</span>
-            </div>
-            <h2 id="profile-display-name">Profile</h2>
-            <p class="eyebrow-copy" id="profile-username">@-</p>
-            <p class="profile-description" id="profile-description" data-i18n="intro_copy">Your Discord profile, public connections and quick account actions live here.</p>
-          </div>
-        </div>
-
-        <div class="owner-controls" id="owner-controls" hidden>
-          <button class="btn btn-secondary" id="logout-discord" type="button">Log out</button>
-          <button class="btn btn-secondary" id="refresh-profile" type="button">Refresh profile</button>
-          <button class="btn btn-secondary" id="public-mode-toggle" type="button">Turn public mode on</button>
-          <button class="btn btn-secondary" id="copy-public-link" type="button">Copy public link</button>
-          <button class="btn btn-ghost" id="delete-profile" type="button">Delete profile</button>
-        </div>
-
-        <p class="status-copy" id="owner-status" aria-live="polite"></p>
-      </section>
-
-      <section class="panel-grid">
-        <article class="section-card">
-          <h2 class="section-title" data-i18n="connections_title">Connections</h2>
-          <p class="section-subtitle" data-i18n="connections_copy">Accounts visible in Discord settings appear here. Hidden or revoked ones are omitted from public mode.</p>
+      <div class="grid">
+        <section class="panel">
+          <h3 id="connections-title">Connections</h3>
           <div class="connection-icons" id="connection-icons"></div>
           <div class="connection-list" id="oauth-connections"></div>
-          <p class="empty-state" id="connections-empty" hidden data-i18n="empty_connections">No connected accounts were found. Add them in Discord settings and refresh the profile.</p>
-        </article>
+          <p class="empty-note" id="connections-empty" hidden>No connected accounts. Add accounts in Discord settings and refresh the profile.</p>
+        </section>
 
-        <article class="section-card">
-          <h2 class="section-title" data-i18n="info_title">Profile Info</h2>
-          <ul class="list-reset kv-list">
-            <li><strong data-i18n="label_display_name">Display Name:</strong> <span id="info-display-name">-</span></li>
-            <li><strong data-i18n="label_username">Username:</strong> <span id="info-username">-</span></li>
-            <li><strong data-i18n="label_public_badges">Public Badges:</strong> <span id="info-public-badges">-</span></li>
-            <li><strong data-i18n="label_banner_color">Banner Color:</strong> <span id="info-banner-color">-</span></li>
-            <li><strong data-i18n="label_accent_color">Accent Color:</strong> <span id="info-accent-color">-</span></li>
+        <section class="panel">
+          <h3 id="info-title">Info</h3>
+          <ul class="kv">
+            <li><strong id="label-display-name">Display Name:</strong> <span id="profile-display-name">-</span></li>
+            <li><strong id="label-username">Username:</strong> <span id="profile-username">-</span></li>
+            <li><strong id="label-public-badges">Public Badges:</strong> <span id="public-badges">-</span></li>
+            <li><strong id="label-banner-color">Banner Color:</strong> <span id="banner-color">-</span></li>
+            <li><strong id="label-accent-color">Accent Color:</strong> <span id="accent-color">-</span></li>
           </ul>
-        </article>
-      </section>
-
-      <section class="section-card" id="guild-panel" hidden>
-        <h2 class="section-title" data-i18n="guild_title">Guild Snapshot</h2>
-        <p class="section-subtitle" data-i18n="guild_copy">Extra details from the preferred Discord server, when Discord exposes them.</p>
-        <div class="guild-stack">
-          <ul class="list-reset kv-list">
-            <li><strong data-i18n="label_guild_name">Guild Name:</strong> <span id="guild-name">-</span></li>
-            <li><strong data-i18n="label_guild_nick">Guild Nickname:</strong> <span id="guild-nick">-</span></li>
-            <li><strong data-i18n="label_guild_bio">Guild Bio:</strong> <span id="guild-bio">-</span></li>
-          </ul>
-        </div>
-      </section>
-
-      <p class="status-copy profile-updated" id="profile-updated"></p>
-    </main>
-
-    <section class="section-card profile-state-card" id="public-state">
-      <h2 data-i18n="loading_profile">Loading profile...</h2>
-      <p id="public-state-message">Loading profile...</p>
-      <div class="auth-strip">
-        <a class="btn btn-secondary" id="public-state-home-link" href="/" data-i18n="back_home">Back to home</a>
-        <a class="btn btn-primary" id="public-state-login-link" href="/auth/discord/login?return_to=/profile/" data-i18n="sign_in_action">Sign in with Discord</a>
+        </section>
       </div>
+
+      <p class="meta" id="last-updated">Last update: -</p>
     </section>
-  </div>
+  </main>
+
+  <section class="public-state" id="public-state">
+    <div class="public-state-card">
+      <p class="public-state-message" id="public-state-message">Loading profile...</p>
+      <a class="action-btn" id="public-state-back-link" href="/" hidden>Back to home</a>
+    </div>
+  </section>
 
   <script src="/site-lang.js"></script>
-  <script src="/assets/site-ui.js"></script>
-  <script src="/assets/profile-app.js"></script>
+  <script>
+    if (!window.SiteLang) {
+      document.write('<script src="../../site-lang.js"><\\/script>');
+    }
+  </script>
+  <script>
+    const AUTH_SESSION_ENDPOINT = "/auth/session";
+    const AUTH_LOGOUT_ENDPOINT = "/auth/logout";
+    const AUTH_PUBLIC_PROFILE_ENDPOINT = "/auth/public-profile";
+    const AUTH_PROFILE_MODE_ENDPOINT = "/auth/profile-mode";
+    const AUTH_PROFILE_DELETE_ENDPOINT = "/auth/profile-delete";
+    const REFRESH_INTERVAL_MS = 60000;
+    const HOME_URL = "/";
+
+    const state = {
+      currentSlug: extractCurrentSlug(),
+      isAuthenticated: false,
+      isOwner: false,
+      publicMode: false
+    };
+
+    const I18N = {
+      en: {
+        page_title: "Bladephoriafonk | Profile",
+        page_heading: "Profile",
+        nav_aria: "Main navigation",
+        nav_home: "Home",
+        nav_server: "Server",
+        nav_admin: "Administration",
+        nav_changelog: "Changelog",
+        no_banner: "No Discord banner",
+        your_profile: "Your profile",
+        connections_title: "Connections",
+        empty_connections: "No connected accounts. Add accounts in Discord settings and refresh the profile.",
+        info_title: "Info",
+        label_display_name: "Display Name:",
+        label_username: "Username:",
+        label_public_badges: "Public Badges:",
+        label_banner_color: "Banner Color:",
+        label_accent_color: "Accent Color:",
+        last_update_prefix: "Last update:",
+        loading_profile: "Loading profile...",
+        back_home: "Back to home",
+        btn_logout: "Log out",
+        btn_delete_profile: "Delete profile",
+        btn_refresh_profile: "Refresh profile",
+        btn_refreshing: "Refreshing...",
+        btn_deleting: "Deleting...",
+        public_mode_prefix: "Public mode:",
+        public_mode_on: "ON",
+        public_mode_off: "OFF",
+        unknown_user: "Unknown",
+        unknown_connection: "Unknown",
+        visible: "Visible",
+        verified: "Verified",
+        yes: "YES",
+        no: "NO",
+        profile_placeholder: "Profile",
+        profile_not_found: "This profile does not exist",
+        profile_private: "This profile is private",
+        update_error: "Update failed",
+        delete_confirm: "Delete profile? This action removes the generated profile and logs you out."
+      },
+      pl: {
+        page_title: "Bladephoriafonk | Profil",
+        page_heading: "Profil",
+        nav_aria: "Nawigacja glowna",
+        nav_home: "Strona Glowna",
+        nav_server: "Serwer",
+        nav_admin: "Administracja",
+        nav_changelog: "Dziennik zmian",
+        no_banner: "Brak bannera Discord",
+        your_profile: "Twoj profil",
+        connections_title: "Polaczenia",
+        empty_connections: "Brak polaczonych kont. Dodaj konta w ustawieniach Discord i odswiez profil.",
+        info_title: "Informacje",
+        label_display_name: "Display Name:",
+        label_username: "Username:",
+        label_public_badges: "Public Badges:",
+        label_banner_color: "Banner Color:",
+        label_accent_color: "Accent Color:",
+        last_update_prefix: "Ostatnia aktualizacja:",
+        loading_profile: "Ladowanie profilu...",
+        back_home: "Wroc do strony glownej",
+        btn_logout: "Wyloguj",
+        btn_delete_profile: "Usun profil",
+        btn_refresh_profile: "Odswiez profil",
+        btn_refreshing: "Odswiezanie...",
+        btn_deleting: "Usuwanie...",
+        public_mode_prefix: "Tryb publiczny:",
+        public_mode_on: "WLACZONY",
+        public_mode_off: "WYLACZONY",
+        unknown_user: "Nieznany",
+        unknown_connection: "Nieznane",
+        visible: "Widoczne",
+        verified: "Zweryfikowane",
+        yes: "TAK",
+        no: "NIE",
+        profile_placeholder: "Profil",
+        profile_not_found: "Ten profil nie istnieje",
+        profile_private: "Ten profil jest prywatny",
+        update_error: "Blad aktualizacji",
+        delete_confirm: "Usunac profil? Ta operacja usunie wygenerowany profil i wyloguje Cie."
+      }
+    };
+
+    function t(key) {
+      return window.SiteLang.translate(I18N, key, window.SiteLang.getLanguage());
+    }
+
+    function formatMessage(key, params) {
+      let message = t(key);
+      Object.entries(params || {}).forEach(([name, value]) => {
+        message = message.replace(`{${name}}`, String(value));
+      });
+      return message;
+    }
+
+    function currentLocale() {
+      return window.SiteLang.getLanguage() === "pl" ? "pl-PL" : "en-US";
+    }
+
+    function extractCurrentSlug() {
+      const segments = window.location.pathname.split("/").filter(Boolean);
+      const profileIndex = segments.indexOf("profile");
+
+      if (profileIndex === -1) {
+        return "";
+      }
+
+      return segments[profileIndex + 1] || "";
+    }
+
+    function setText(id, value) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = value;
+      }
+    }
+
+    function setLastUpdated(value) {
+      setText("last-updated", `${t("last_update_prefix")} ${value}`);
+    }
+
+    function refreshOwnerControlTexts() {
+      const logoutButton = document.getElementById("logout-discord");
+      const deleteButton = document.getElementById("delete-profile");
+      const refreshButton = document.getElementById("refresh-profile");
+      const publicModeButton = document.getElementById("public-mode-toggle");
+
+      if (logoutButton) {
+        logoutButton.textContent = t("btn_logout");
+      }
+      if (deleteButton && !deleteButton.disabled) {
+        deleteButton.textContent = t("btn_delete_profile");
+      }
+      if (refreshButton) {
+        refreshButton.textContent = refreshButton.disabled ? t("btn_refreshing") : t("btn_refresh_profile");
+      }
+      if (publicModeButton) {
+        publicModeButton.textContent = `${t("public_mode_prefix")} ${state.publicMode ? t("public_mode_on") : t("public_mode_off")}`;
+      }
+    }
+
+    function applyLanguage() {
+      document.title = t("page_title");
+      setText("page-heading", t("page_heading"));
+      setText("nav-home", t("nav_home"));
+      setText("nav-server", t("nav_server"));
+      setText("nav-admin", t("nav_admin"));
+      setText("nav-changelog", t("nav_changelog"));
+      setText("profile-art-fallback", t("no_banner"));
+      setText("display-name", t("your_profile"));
+      setText("connections-title", t("connections_title"));
+      setText("connections-empty", t("empty_connections"));
+      setText("info-title", t("info_title"));
+      setText("label-display-name", t("label_display_name"));
+      setText("label-username", t("label_username"));
+      setText("label-public-badges", t("label_public_badges"));
+      setText("label-banner-color", t("label_banner_color"));
+      setText("label-accent-color", t("label_accent_color"));
+      setText("public-state-back-link", t("back_home"));
+
+      const nav = document.getElementById("top-nav");
+      if (nav) {
+        nav.setAttribute("aria-label", t("nav_aria"));
+      }
+
+      const message = document.getElementById("public-state-message");
+      const isVisible = message && message.textContent;
+      if (isVisible === "Loading profile..." || isVisible === "Ladowanie profilu...") {
+        message.textContent = t("loading_profile");
+      }
+
+      refreshOwnerControlTexts();
+      setPublicModeUi(state.isOwner, state.publicMode);
+    }
+
+    function setPublicStateBackVisible(isVisible) {
+      const backLink = document.getElementById("public-state-back-link");
+      if (!backLink) {
+        return;
+      }
+
+      backLink.hidden = !isVisible;
+    }
+
+    function showLoadingState() {
+      const profileMain = document.getElementById("profile-main");
+      const publicState = document.getElementById("public-state");
+      const publicStateMessage = document.getElementById("public-state-message");
+
+      if (publicStateMessage) {
+        publicStateMessage.textContent = t("loading_profile");
+      }
+
+      setPublicStateBackVisible(false);
+
+      if (profileMain) {
+        profileMain.hidden = true;
+      }
+
+      if (publicState) {
+        publicState.hidden = false;
+      }
+    }
+
+    function showPublicState(message) {
+      const profileMain = document.getElementById("profile-main");
+      const publicState = document.getElementById("public-state");
+      const publicStateMessage = document.getElementById("public-state-message");
+
+      if (publicStateMessage) {
+        publicStateMessage.textContent = message;
+      }
+
+      setPublicStateBackVisible(true);
+
+      if (profileMain) {
+        profileMain.hidden = true;
+      }
+
+      if (publicState) {
+        publicState.hidden = false;
+      }
+    }
+
+    function hidePublicState() {
+      const profileMain = document.getElementById("profile-main");
+      const publicState = document.getElementById("public-state");
+
+      if (profileMain) {
+        profileMain.hidden = false;
+      }
+
+      if (publicState) {
+        publicState.hidden = true;
+      }
+    }
+
+    function setOwnerControlsVisible(isVisible) {
+      const ownerControls = document.getElementById("owner-controls");
+      if (ownerControls) {
+        ownerControls.hidden = !isVisible;
+        ownerControls.style.display = isVisible ? "flex" : "none";
+        if (!isVisible) {
+          ownerControls.innerHTML = "";
+          ownerControls.dataset.ready = "false";
+        }
+      }
+    }
+
+    function ensureOwnerControls() {
+      const ownerControls = document.getElementById("owner-controls");
+      if (!ownerControls || ownerControls.dataset.ready === "true") {
+        return;
+      }
+
+      ownerControls.innerHTML = `
+        <button id="logout-discord" class="action-btn secondary" type="button">${t("btn_logout")}</button>
+        <button id="delete-profile" class="action-btn secondary" type="button">${t("btn_delete_profile")}</button>
+        <button id="refresh-profile" class="action-btn secondary" type="button">${t("btn_refresh_profile")}</button>
+        <button id="public-mode-toggle" class="action-btn secondary" type="button">${t("public_mode_prefix")} ${t("public_mode_off")}</button>
+      `;
+      ownerControls.dataset.ready = "true";
+
+      const logoutButton = document.getElementById("logout-discord");
+      const deleteButton = document.getElementById("delete-profile");
+      const refreshButton = document.getElementById("refresh-profile");
+      const publicModeButton = document.getElementById("public-mode-toggle");
+
+      if (logoutButton) {
+        logoutButton.addEventListener("click", async () => {
+          try {
+            await fetch(AUTH_LOGOUT_ENDPOINT, {
+              method: "POST",
+              credentials: "include"
+            });
+          } catch (_error) {
+            // ignore
+          }
+
+          window.location.href = HOME_URL;
+        });
+      }
+
+      if (deleteButton) {
+        deleteButton.addEventListener("click", async () => {
+          await deleteOwnProfile();
+        });
+      }
+
+      if (refreshButton) {
+        refreshButton.addEventListener("click", async () => {
+          await refreshProfileData();
+        });
+      }
+
+      if (publicModeButton) {
+        publicModeButton.addEventListener("click", async () => {
+          const current = publicModeButton.dataset.enabled === "true";
+          await setPublicMode(!current);
+          await loadSession();
+        });
+      }
+    }
+
+    function setRefreshButtonBusy(isBusy) {
+      const refreshButton = document.getElementById("refresh-profile");
+      if (!refreshButton) {
+        return;
+      }
+
+      refreshButton.disabled = isBusy;
+      refreshButton.textContent = isBusy ? t("btn_refreshing") : t("btn_refresh_profile");
+    }
+
+    function formatNow() {
+      return new Date().toLocaleString(currentLocale());
+    }
+
+    function formatIsoTime(value) {
+      if (!value) {
+        return formatNow();
+      }
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return formatNow();
+      }
+
+      return date.toLocaleString(currentLocale());
+    }
+
+    function toHexColor(numberValue) {
+      if (typeof numberValue !== "number" || !Number.isFinite(numberValue)) {
+        return "-";
+      }
+
+      return `#${numberValue.toString(16).padStart(6, "0")}`;
+    }
+
+    function decodeBadges(publicFlags) {
+      if (typeof publicFlags !== "number" || publicFlags <= 0) {
+        return "-";
+      }
+
+      const badges = [];
+      if (publicFlags & 1) badges.push("Discord Employee");
+      if (publicFlags & 2) badges.push("Partnered Server Owner");
+      if (publicFlags & 4) badges.push("HypeSquad Events");
+      if (publicFlags & 8) badges.push("Bug Hunter Level 1");
+      if (publicFlags & 64) badges.push("House Bravery");
+      if (publicFlags & 128) badges.push("House Brilliance");
+      if (publicFlags & 256) badges.push("House Balance");
+      if (publicFlags & 512) badges.push("Early Supporter");
+      if (publicFlags & 16384) badges.push("Bug Hunter Level 2");
+      if (publicFlags & 131072) badges.push("Verified Bot Developer");
+      if (publicFlags & 4194304) badges.push("Active Developer");
+
+      return badges.length ? badges.join(", ") : `Flags: ${publicFlags}`;
+    }
+
+    function setProfileArt(user) {
+      const wrap = document.getElementById("profile-art-wrap");
+      const image = document.getElementById("profile-art-image");
+      const fallback = document.getElementById("profile-art-fallback");
+      const color = user.banner_color || "#0b0b0b";
+
+      if (wrap) {
+        wrap.style.minHeight = "220px";
+        wrap.style.display = "flex";
+        wrap.style.visibility = "visible";
+        wrap.style.background = color;
+      }
+
+      if (!wrap || !image) {
+        return;
+      }
+
+      const bannerUrl = user.banner_url || "";
+
+      if (bannerUrl) {
+        image.src = bannerUrl;
+        image.alt = `${user.global_name || user.username || t("unknown_user")} banner`;
+        image.hidden = false;
+        image.onerror = () => {
+          image.hidden = true;
+          if (fallback) {
+            fallback.hidden = false;
+          }
+        };
+        if (fallback) {
+          fallback.hidden = true;
+        }
+        wrap.hidden = false;
+      } else {
+        image.removeAttribute("src");
+        image.alt = t("no_banner");
+        image.hidden = true;
+        if (fallback) {
+          fallback.hidden = false;
+        }
+        wrap.hidden = false;
+      }
+    }
+
+    function setAvatar(user) {
+      const avatar = document.getElementById("avatar");
+      if (!avatar) {
+        return;
+      }
+
+      avatar.src = user.avatar_url || "https://cdn.discordapp.com/embed/avatars/0.png";
+      avatar.alt = `${user.global_name || user.username || t("unknown_user")} avatar`;
+    }
+
+    function buildConnectionIcon(type) {
+      const icon = document.createElement("div");
+      icon.className = "connection-pill";
+      icon.textContent = (type || "?").slice(0, 1).toUpperCase();
+      icon.title = type || "unknown";
+      return icon;
+    }
+
+    function renderConnections(connections) {
+      const icons = document.getElementById("connection-icons");
+      const list = document.getElementById("oauth-connections");
+      const empty = document.getElementById("connections-empty");
+
+      if (!icons || !list || !empty) {
+        return;
+      }
+
+      icons.innerHTML = "";
+      list.innerHTML = "";
+
+      if (!Array.isArray(connections) || connections.length === 0) {
+        empty.hidden = false;
+        return;
+      }
+
+      empty.hidden = true;
+
+      connections.forEach((connection) => {
+        icons.appendChild(buildConnectionIcon(connection.type));
+
+        const card = document.createElement("article");
+        card.className = "connection-card";
+
+        const head = document.createElement("div");
+        head.className = "connection-head";
+
+        const name = document.createElement("strong");
+        name.textContent = connection.name || t("unknown_connection");
+
+        const type = document.createElement("span");
+        type.className = "connection-type";
+        type.textContent = connection.type || "unknown";
+
+        head.appendChild(name);
+        head.appendChild(type);
+
+        const meta = document.createElement("p");
+        meta.className = "connection-meta";
+        meta.textContent = `${t("visible")}: ${connection.visibility === 1 ? t("yes") : t("no")} | ${t("verified")}: ${connection.verified ? t("yes") : t("no")}`;
+
+        card.appendChild(head);
+        card.appendChild(meta);
+        list.appendChild(card);
+      });
+    }
+
+    function setPublicModeUi(showControl, enabled) {
+      const toggle = document.getElementById("public-mode-toggle");
+
+      if (toggle) {
+        toggle.hidden = !showControl;
+        toggle.dataset.enabled = enabled ? "true" : "false";
+        toggle.textContent = `${t("public_mode_prefix")} ${enabled ? t("public_mode_on") : t("public_mode_off")}`;
+      }
+    }
+
+    function resetProfilePlaceholders() {
+      setProfileArt({ banner_url: "", banner_color: "#0b0b0b" });
+      setAvatar({ avatar_url: "", username: "uzytkownik" });
+      setText("display-name", t("profile_placeholder"));
+      setText("username", "@-");
+      setText("profile-display-name", "-");
+      setText("profile-username", "-");
+      setText("public-badges", "-");
+      setText("banner-color", "-");
+      setText("accent-color", "-");
+      renderConnections([]);
+      setLastUpdated(formatNow());
+    }
+
+    function applyProfile(user, connections) {
+      const displayName = user.global_name || user.username || t("unknown_user");
+      const username = user.username ? `@${user.username}` : "@nieznany";
+
+      setProfileArt(user);
+      setAvatar(user);
+
+      setText("display-name", displayName);
+      setText("username", username);
+      setText("profile-display-name", displayName);
+      setText("profile-username", username);
+      setText("public-badges", decodeBadges(user.public_flags));
+      setText("banner-color", user.banner_color || "-");
+      setText("accent-color", toHexColor(user.accent_color));
+      renderConnections(connections);
+
+      setLastUpdated(formatNow());
+    }
+
+    async function showPublicView(slug) {
+      try {
+        const query = new URLSearchParams({ slug }).toString();
+        const response = await fetch(`${AUTH_PUBLIC_PROFILE_ENDPOINT}?${query}`, {
+          cache: "no-store"
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          if (response.status === 403) {
+            showPublicState(t("profile_private"));
+            return;
+          }
+
+          showPublicState(t("profile_not_found"));
+          return;
+        }
+
+        const profile = data.profile || {};
+        hidePublicState();
+        applyProfile(profile.user || {}, profile.connections || []);
+        setPublicModeUi(false, false);
+        setLastUpdated(formatIsoTime(profile.updated_at));
+      } catch (error) {
+        console.error(error);
+        showPublicState(t("profile_not_found"));
+        setPublicModeUi(false, false);
+      }
+    }
+
+    async function setPublicMode(enabled) {
+      const toggle = document.getElementById("public-mode-toggle");
+      if (!toggle) {
+        return;
+      }
+
+      toggle.disabled = true;
+
+      try {
+        const response = await fetch(AUTH_PROFILE_MODE_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({ public_mode: Boolean(enabled) })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        state.publicMode = Boolean(data.profile && data.profile.public_mode);
+        setPublicModeUi(true, state.publicMode);
+      } catch (error) {
+        console.error(error);
+        setPublicModeUi(true, state.publicMode);
+      } finally {
+        toggle.disabled = false;
+      }
+    }
+
+    async function deleteOwnProfile() {
+      const deleteButton = document.getElementById("delete-profile");
+      if (!deleteButton) {
+        return;
+      }
+
+      if (!window.confirm(t("delete_confirm"))) {
+        return;
+      }
+
+      const previousLabel = deleteButton.textContent;
+      deleteButton.disabled = true;
+      deleteButton.textContent = t("btn_deleting");
+
+      try {
+        const response = await fetch(AUTH_PROFILE_DELETE_ENDPOINT, {
+          method: "POST",
+          credentials: "include"
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        window.location.href = "/";
+      } catch (error) {
+        console.error(error);
+        deleteButton.disabled = false;
+        deleteButton.textContent = previousLabel;
+      }
+    }
+
+    async function loadSession() {
+      try {
+        const response = await fetch(AUTH_SESSION_ENDPOINT, {
+          cache: "no-store",
+          credentials: "include"
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.authenticated) {
+          state.isAuthenticated = false;
+          state.isOwner = false;
+          state.publicMode = false;
+          setOwnerControlsVisible(false);
+          setPublicModeUi(false, false);
+
+          if (state.currentSlug) {
+            await showPublicView(state.currentSlug);
+          } else {
+            hidePublicState();
+            resetProfilePlaceholders();
+          }
+
+          return;
+        }
+
+        state.isAuthenticated = true;
+
+        const user = data.user || {};
+        const connections = Array.isArray(data.connections) ? data.connections : [];
+        const ownSlug = data.profile && data.profile.slug ? String(data.profile.slug) : "";
+        const ownPublicMode = Boolean(data.profile && data.profile.public_mode);
+
+        if (ownSlug && state.currentSlug && ownSlug !== state.currentSlug) {
+          window.location.href = `/profile/${ownSlug}/`;
+          return;
+        }
+
+        const isOwner = !state.currentSlug || (ownSlug && state.currentSlug === ownSlug);
+
+        state.isOwner = isOwner;
+        state.publicMode = ownPublicMode;
+
+        if (isOwner) {
+          hidePublicState();
+          ensureOwnerControls();
+          setOwnerControlsVisible(true);
+          applyProfile(user, connections);
+          setPublicModeUi(true, ownPublicMode);
+          return;
+        }
+
+        setOwnerControlsVisible(false);
+        setPublicModeUi(false, false);
+        await showPublicView(state.currentSlug);
+      } catch (error) {
+        console.error(error);
+        setOwnerControlsVisible(false);
+        setPublicModeUi(false, false);
+
+        if (state.currentSlug) {
+          showPublicState(t("profile_not_found"));
+          return;
+        }
+
+        hidePublicState();
+        resetProfilePlaceholders();
+        setText("display-name", t("update_error"));
+      }
+    }
+
+    async function refreshProfileData() {
+      setRefreshButtonBusy(true);
+      try {
+        await loadSession();
+      } finally {
+        setRefreshButtonBusy(false);
+      }
+    }
+
+    async function bootstrap() {
+      applyLanguage();
+      showLoadingState();
+      await loadSession();
+      setInterval(loadSession, REFRESH_INTERVAL_MS);
+    }
+
+    window.addEventListener("site-language-change", async () => {
+      applyLanguage();
+      await loadSession();
+    });
+
+    bootstrap();
+  </script>
 </body>
 </html>
