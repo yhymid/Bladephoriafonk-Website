@@ -10,7 +10,7 @@ server {
     listen [::]:443 ssl http2;
     server_name bladephoriafonk.xyz www.bladephoriafonk.xyz;
 
-    root /home/ubuntu/yhymfiles/website;
+    root /home/ubuntu/Main Files/website;
     index index.html;
 
     add_header X-Content-Type-Options "nosniff" always;

@@ -22,6 +22,8 @@ const PROFILE_SOURCE_ROOT = process.env.PROFILE_SOURCE_ROOT || path.resolve(__di
 const PROFILE_TEMPLATE_FILE = process.env.PROFILE_TEMPLATE_FILE || path.resolve(__dirname, "profile-template.html");
 const PROFILE_DB_FILE = process.env.PROFILE_DB_FILE || path.resolve(__dirname, "data", "profiles.json");
 const CHANGELOG_DB_FILE = process.env.CHANGELOG_DB_FILE || path.resolve(__dirname, "data", "changelog.json");
+const MEDIA_ROOT = process.env.MEDIA_ROOT || path.resolve(__dirname, "..", "media");
+const MEDIA_ID_PATTERN = /^[a-f0-9]{32}$/;
 
 const TOKEN_ENDPOINT = "https://discord.com/api/oauth2/token";
 const USER_ENDPOINT = "https://discord.com/api/v10/users/@me";
@@ -986,6 +988,33 @@ function cleanup() {
   }
 }
 
+async function deletePublishedMedia(id, token) {
+  if (!MEDIA_ID_PATTERN.test(id) || typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token)) {
+    return false;
+  }
+
+  const mediaDirectory = path.join(MEDIA_ROOT, id);
+  let storedToken;
+  try {
+    storedToken = (await fs.readFile(path.join(mediaDirectory, ".delete-token"), "utf8")).trim();
+  } catch {
+    return false;
+  }
+
+  const expected = Buffer.from(storedToken, "utf8");
+  const provided = Buffer.from(token, "utf8");
+  if (expected.length !== provided.length || !crypto.timingSafeEqual(expected, provided)) {
+    return false;
+  }
+
+  try {
+    await fs.rm(mediaDirectory, { recursive: true, force: false });
+  } catch {
+    return false;
+  }
+  return true;
+}
+
 setInterval(cleanup, 60_000).unref();
 
 const server = http.createServer(async (req, res) => {
@@ -995,6 +1024,17 @@ const server = http.createServer(async (req, res) => {
 
     if (routePath === "/health") {
       return json(res, 200, { ok: true, service: "discord-oauth" });
+    }
+
+    if (routePath === "/auth/media-delete" && req.method === "POST") {
+      const body = await readJsonBody(req, 64 * 1024);
+      const id = typeof body?.id === "string" ? body.id : "";
+      const token = typeof body?.token === "string" ? body.token : "";
+      const deleted = await deletePublishedMedia(id, token);
+      if (!deleted) {
+        return json(res, 404, { error: "media_not_found_or_invalid_token" });
+      }
+      return json(res, 200, { ok: true, deleted: true });
     }
 
     if (routePath === "/auth/discord/login" && req.method === "GET") {

@@ -4,7 +4,7 @@
 
 Trzymaj stronę w katalogu podobnym do:
 
-- `/home/ubuntu/yhymfiles/website`
+- `/home/ubuntu/Main Files/website`
 
 Publiczne pliki:
 

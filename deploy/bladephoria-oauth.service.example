@@ -5,9 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/home/ubuntu/yhymfiles/website/oauth
+WorkingDirectory=/home/ubuntu/Main Files/website/oauth
 EnvironmentFile=/home/ubuntu/.bladephoria-oauth.env
-ExecStart=/usr/bin/node --env-file=/home/ubuntu/.bladephoria-oauth.env /home/ubuntu/yhymfiles/website/oauth/discord-auth-server.mjs
+ExecStart=/usr/bin/node --env-file=/home/ubuntu/.bladephoria-oauth.env /home/ubuntu/Main Files/website/oauth/discord-auth-server.mjs
 Restart=always
 RestartSec=3
 
