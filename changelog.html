@@ -402,8 +402,10 @@
       let html = escapeHtml(text);
       const codeTokens = [];
 
+      // Placeholders use private-use characters so that no Markdown rule
+      // below can match inside them.
       html = html.replace(/`([^`\n]+)`/g, (_match, codeText) => {
-        const token = `@@CODE_${codeTokens.length}@@`;
+        const token = `\uE000${codeTokens.length}\uE001`;
         codeTokens.push(`<code>${codeText}</code>`);
         return token;
       });
@@ -425,10 +427,11 @@
       html = html.replace(/__([\s\S]+?)__/g, "<u>$1</u>");
       html = html.replace(/~~([\s\S]+?)~~/g, "<s>$1</s>");
       html = html.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
-      html = html.replace(/(?<!_)_([^_\n]+)_(?!_)/g, "<em>$1</em>");
+      // Like Discord: underscores inside a word (snake_case) are not italics.
+      html = html.replace(/(?<![\w_])_([^_\n]+)_(?![\w_])/g, "<em>$1</em>");
 
       codeTokens.forEach((tokenHtml, index) => {
-        html = html.replace(`@@CODE_${index}@@`, tokenHtml);
+        html = html.replace(`\uE000${index}\uE001`, () => tokenHtml);
       });
 
       return html;
