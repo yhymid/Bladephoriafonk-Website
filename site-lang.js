@@ -116,6 +116,68 @@
     return selectedLanguage;
   }
 
+  const LOGIN_ERRORS = {
+    en: {
+      access_denied: "Login cancelled. You did not authorize the Discord app.",
+      fallback: "Logging in with Discord failed. Please try again.",
+      close: "Close"
+    },
+    pl: {
+      access_denied: "Logowanie anulowane. Aplikacja Discord nie została autoryzowana.",
+      fallback: "Logowanie przez Discorda nie powiodło się. Spróbuj ponownie.",
+      close: "Zamknij"
+    }
+  };
+
+  // After a failed login the backend redirects back with ?oauth_error=<code>.
+  // Show a readable message and clean the address bar.
+  function showLoginError() {
+    let params;
+    try {
+      params = new URLSearchParams(window.location.search);
+    } catch {
+      return;
+    }
+
+    const code = params.get("oauth_error");
+    if (!code) {
+      return;
+    }
+
+    params.delete("oauth_error");
+    const query = params.toString();
+    try {
+      window.history.replaceState(null, "", window.location.pathname + (query ? `?${query}` : "") + window.location.hash);
+    } catch {
+      // ignore history failures
+    }
+
+    const texts = LOGIN_ERRORS[getLanguage()] || LOGIN_ERRORS.en;
+    const banner = document.createElement("div");
+    banner.setAttribute("role", "alert");
+    banner.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;gap:16px;align-items:center;"
+      + "justify-content:center;padding:12px 16px;background:#000;color:#fff;border-bottom:1px solid #fff;"
+      + "font:16px/1.4 system-ui,sans-serif;text-align:center;";
+
+    const message = document.createElement("span");
+    message.textContent = Object.prototype.hasOwnProperty.call(texts, code) ? texts[code] : texts.fallback;
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.textContent = texts.close;
+    close.style.cssText = "background:#000;color:#fff;border:1px solid #fff;padding:4px 12px;cursor:pointer;font:inherit;";
+    close.addEventListener("click", () => banner.remove());
+
+    banner.append(message, close);
+    document.body.prepend(banner);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", showLoginError);
+  } else {
+    showLoginError();
+  }
+
   window.SiteLang = {
     DEFAULT_LANG,
     SUPPORTED,

@@ -147,7 +147,7 @@
       </nav>
     </header>
 
-    <p class="intro" data-i18n="intro">List of Discord servers and profile information based on public invite data. Data refreshes every 60 seconds.</p>
+    <p class="intro" data-i18n="intro">Our Discord servers, with details taken from public invite data. The data refreshes every 60 seconds.</p>
 
     <section class="server-card">
       <div class="server-head">
@@ -158,19 +158,19 @@
         <button class="toggle-btn" data-target="blade-profile" aria-expanded="false" data-i18n="show_profile">Show server profile</button>
       </div>
       <div class="links">
-        <p><strong data-i18n="main_url">Main URL:</strong> <a href="https://discord.gg/Nh7XnSMhCp">https://discord.gg/Nh7XnSMhCp</a></p>
-        <p><strong data-i18n="alt_url">Alternative URL:</strong> <a href="https://discord.gg/2xTr8pmk36">https://discord.gg/2xTr8pmk36</a></p>
+        <p><strong data-i18n="main_url">Main link:</strong> <a id="blade-main-link" href="https://discord.gg/Nh7XnSMhCp">https://discord.gg/Nh7XnSMhCp</a></p>
+        <p><strong data-i18n="alt_url">Backup link:</strong> <a id="blade-alt-link" href="https://discord.gg/2xTr8pmk36">https://discord.gg/2xTr8pmk36</a></p>
       </div>
       <p class="status" id="blade-status" data-i18n="status_loading">Status: loading...</p>
       <div class="profile" id="blade-profile" hidden>
         <ul class="profile-list">
           <li><strong data-i18n="label_server_id">Server ID:</strong> <span id="blade-id">-</span></li>
-          <li><strong data-i18n="label_members">Estimated members:</strong> <span id="blade-members">-</span></li>
-          <li><strong data-i18n="label_online">Estimated online:</strong> <span id="blade-online">-</span></li>
+          <li><strong data-i18n="label_members">Members (estimated):</strong> <span id="blade-members">-</span></li>
+          <li><strong data-i18n="label_online">Online (estimated):</strong> <span id="blade-online">-</span></li>
           <li><strong data-i18n="label_verification">Verification level:</strong> <span id="blade-verification">-</span></li>
           <li><strong data-i18n="label_boost">Boost level:</strong> <span id="blade-boost">-</span></li>
           <li><strong data-i18n="label_description">Server description:</strong> <span id="blade-description">-</span></li>
-          <li><strong data-i18n="label_updated">Last update:</strong> <span id="blade-updated">-</span></li>
+          <li><strong data-i18n="label_updated">Last updated:</strong> <span id="blade-updated">-</span></li>
           <li><strong data-i18n="label_source">Data source:</strong> <a id="blade-source" href="https://discord.com/api/v9/invites/Nh7XnSMhCp?with_counts=true&with_expiration=true">Discord Invite API</a></li>
         </ul>
       </div>
@@ -185,18 +185,18 @@
         <button class="toggle-btn" data-target="pmc-profile" aria-expanded="false" data-i18n="show_profile">Show server profile</button>
       </div>
       <div class="links">
-        <p><strong data-i18n="main_url">Main URL:</strong> <a href="https://discord.gg/2upsTHV5Bv">https://discord.gg/2upsTHV5Bv</a></p>
+        <p><strong data-i18n="main_url">Main link:</strong> <a id="pmc-main-link" href="https://discord.gg/2upsTHV5Bv">https://discord.gg/2upsTHV5Bv</a></p>
       </div>
       <p class="status" id="pmc-status" data-i18n="status_loading">Status: loading...</p>
       <div class="profile" id="pmc-profile" hidden>
         <ul class="profile-list">
           <li><strong data-i18n="label_server_id">Server ID:</strong> <span id="pmc-id">-</span></li>
-          <li><strong data-i18n="label_members">Estimated members:</strong> <span id="pmc-members">-</span></li>
-          <li><strong data-i18n="label_online">Estimated online:</strong> <span id="pmc-online">-</span></li>
+          <li><strong data-i18n="label_members">Members (estimated):</strong> <span id="pmc-members">-</span></li>
+          <li><strong data-i18n="label_online">Online (estimated):</strong> <span id="pmc-online">-</span></li>
           <li><strong data-i18n="label_verification">Verification level:</strong> <span id="pmc-verification">-</span></li>
           <li><strong data-i18n="label_boost">Boost level:</strong> <span id="pmc-boost">-</span></li>
           <li><strong data-i18n="label_description">Server description:</strong> <span id="pmc-description">-</span></li>
-          <li><strong data-i18n="label_updated">Last update:</strong> <span id="pmc-updated">-</span></li>
+          <li><strong data-i18n="label_updated">Last updated:</strong> <span id="pmc-updated">-</span></li>
           <li><strong data-i18n="label_source">Data source:</strong> <a id="pmc-source" href="https://discord.com/api/v9/invites/2upsTHV5Bv?with_counts=true&with_expiration=true">Discord Invite API</a></li>
         </ul>
       </div>
@@ -221,25 +221,25 @@
         nav_home: "Home",
         nav_admin: "Administration",
         nav_changelog: "Changelog",
-        intro: "List of Discord servers and profile information based on public invite data. Data refreshes every 60 seconds.",
+        intro: "Our Discord servers, with details taken from public invite data. The data refreshes every 60 seconds.",
         show_profile: "Show server profile",
         hide_profile: "Hide server profile",
-        main_url: "Main URL:",
-        alt_url: "Alternative URL:",
+        main_url: "Main link:",
+        alt_url: "Backup link:",
         label_server_id: "Server ID:",
-        label_members: "Estimated members:",
-        label_online: "Estimated online:",
+        label_members: "Members (estimated):",
+        label_online: "Online (estimated):",
         label_verification: "Verification level:",
         label_boost: "Boost level:",
         label_description: "Server description:",
-        label_updated: "Last update:",
+        label_updated: "Last updated:",
         label_source: "Data source:",
         status_loading: "Status: loading...",
         status_current: "Status: up to date",
-        status_cached: "Status: cached data shown",
-        status_error_prefix: "Status: refresh failed",
+        status_cached: "Status: showing saved data",
+        status_error_prefix: "Status: could not refresh the data",
         no_description: "No description",
-        tier_format: "Tier {tier} ({boosts} boosts)",
+        tier_format: "Level {tier} ({boosts} boosts)",
         verification_none: "0 (None)",
         verification_low: "1 (Low)",
         verification_medium: "2 (Medium)",
@@ -249,31 +249,31 @@
       pl: {
         page_title: "Bladephoriafonk | Serwer",
         heading: "Serwer",
-        nav_home: "Strona Glowna",
+        nav_home: "Strona główna",
         nav_admin: "Administracja",
         nav_changelog: "Dziennik zmian",
-        intro: "Lista serwerow Discord i informacji profilowych opartych o publiczne dane zaproszen. Dane odswiezaja sie co 60 sekund.",
-        show_profile: "Pokaz profil serwera",
+        intro: "Lista serwerów Discord wraz z informacjami z publicznych danych zaproszeń. Dane odświeżają się co 60 sekund.",
+        show_profile: "Pokaż profil serwera",
         hide_profile: "Ukryj profil serwera",
-        main_url: "Glowny URL:",
-        alt_url: "Alternatywny URL:",
+        main_url: "Główny link:",
+        alt_url: "Zapasowy link:",
         label_server_id: "ID serwera:",
-        label_members: "Szacunkowa liczba czlonkow:",
-        label_online: "Szacunkowo online:",
+        label_members: "Liczba członków (szacunkowo):",
+        label_online: "Online (szacunkowo):",
         label_verification: "Poziom weryfikacji:",
-        label_boost: "Poziom boost:",
+        label_boost: "Poziom ulepszeń:",
         label_description: "Opis serwera:",
         label_updated: "Ostatnia aktualizacja:",
-        label_source: "Zrodlo danych:",
-        status_loading: "Status: ladowanie...",
-        status_current: "Status: aktualne",
-        status_cached: "Status: pokazano dane z cache",
-        status_error_prefix: "Status: blad aktualizacji",
+        label_source: "Źródło danych:",
+        status_loading: "Status: ładowanie...",
+        status_current: "Status: dane aktualne",
+        status_cached: "Status: pokazano zapamiętane dane",
+        status_error_prefix: "Status: nie udało się odświeżyć danych",
         no_description: "Brak opisu",
-        tier_format: "Tier {tier} ({boosts} boostow)",
+        tier_format: "Poziom {tier} (ulepszenia: {boosts})",
         verification_none: "0 (Brak)",
         verification_low: "1 (Niski)",
-        verification_medium: "2 (Sredni)",
+        verification_medium: "2 (Średni)",
         verification_high: "3 (Wysoki)",
         verification_very_high: "4 (Bardzo wysoki)"
       }
@@ -325,6 +325,22 @@
       }
     }
 
+    // The backend reports which invite currently works; show that one.
+    function setInviteLink(key, kind, url) {
+      const element = document.getElementById(`${key}-${kind}-link`);
+      if (!element) {
+        return;
+      }
+      const isInvite = typeof url === "string" && url.startsWith("https://discord.gg/");
+      if (isInvite) {
+        element.href = url;
+        element.textContent = url;
+      }
+      if (kind === "alt" && element.parentElement) {
+        element.parentElement.hidden = !isInvite;
+      }
+    }
+
     function setIcon(key, url) {
       const element = document.getElementById(`${key}-icon`);
       if (element && url) {
@@ -364,6 +380,8 @@
       setValue(key, "description", description);
       setValue(key, "updated", formatDate(server.updated_at));
       setSourceLink(key, server.source_url);
+      setInviteLink(key, "main", server.main_url);
+      setInviteLink(key, "alt", server.alt_url);
       setIcon(key, server.icon_url);
 
       if (!statusElement) {

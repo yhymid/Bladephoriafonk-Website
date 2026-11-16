@@ -15,6 +15,8 @@ use tower_http::services::ServeFile;
 
 use crate::api::{SharedApp, not_found as api_not_found, security_headers};
 use crate::config::Config;
+use crate::store;
+use crate::util::sanitize_slug;
 
 const CONTENT_SECURITY_POLICY: &str = "default-src 'self'; base-uri 'self'; form-action 'self'; \
 frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; \
@@ -32,6 +34,8 @@ enum Target {
     File(PathBuf),
     /// A path inside a tree where directories serve their `index.html`.
     Tree(PathBuf),
+    /// The page of a user profile; served only when the profile exists.
+    Profile(String),
     Redirect(String),
     NotFound,
 }
@@ -92,7 +96,17 @@ fn resolve(cfg: &Config, raw_path: &str) -> Target {
             if let Some(rest) = relative.strip_prefix("assets/") {
                 Target::File(root.join("assets").join(rest))
             } else if let Some(rest) = relative.strip_prefix("profile/") {
-                Target::Tree(cfg.profile_root.join(rest))
+                match rest {
+                    "" | "index.html" => Target::File(cfg.profile_template_file.clone()),
+                    _ => {
+                        let slug = sanitize_slug(rest.strip_suffix('/').unwrap_or(rest));
+                        if slug.is_empty() || slug != rest.trim_end_matches('/') {
+                            Target::NotFound
+                        } else {
+                            Target::Profile(slug)
+                        }
+                    }
+                }
             } else if let Some(rest) = relative.strip_prefix("media/") {
                 Target::Tree(cfg.media_root.join(rest))
             } else {
@@ -102,13 +116,57 @@ fn resolve(cfg: &Config, raw_path: &str) -> Target {
     }
 }
 
+/// The "page not found" screen: black page, message in the middle.
+const NOT_FOUND_PAGE: &str = r#"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bladephoriafonk | 404</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body { background: #000; color: #fff; display: flex; align-items: center; justify-content: center;
+         text-align: center; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1 { margin: 0; font-size: clamp(4rem, 18vw, 9rem); font-weight: 700; letter-spacing: 0.04em; line-height: 1; }
+  p { margin: 1rem 1.5rem 2rem; font-size: 1.1rem; color: #bdbdbd; }
+  a { color: #fff; border: 1px solid #fff; padding: 0.6rem 1.4rem; text-decoration: none; }
+  a:hover, a:focus-visible { background: #fff; color: #000; }
+</style>
+</head>
+<body>
+<main>
+  <h1>404</h1>
+  <p id="message">This page does not exist.</p>
+  <a id="home" href="/">Back to home</a>
+</main>
+<script>
+  (function () {
+    var stored = "";
+    try { stored = window.localStorage.getItem("site_lang") || ""; } catch (error) {}
+    var language = (stored || navigator.language || "en").toLowerCase();
+    if (language.indexOf("pl") === 0) {
+      document.documentElement.lang = "pl";
+      document.getElementById("message").textContent = "Ta strona nie istnieje.";
+      document.getElementById("home").textContent = "Wróć na stronę główną";
+    }
+  })();
+</script>
+</body>
+</html>
+"#;
+
 fn plain_not_found() -> Response {
-    let mut response = Response::new(Body::from("Not found"));
+    let mut response = Response::new(Body::from(NOT_FOUND_PAGE));
     *response.status_mut() = StatusCode::NOT_FOUND;
     let headers = response.headers_mut();
     headers.insert(
         CONTENT_TYPE,
-        HeaderValue::from_static("text/plain; charset=utf-8"),
+        HeaderValue::from_static("text/html; charset=utf-8"),
+    );
+    headers.insert(CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    headers.insert(
+        "content-security-policy",
+        HeaderValue::from_static(CONTENT_SECURITY_POLICY),
     );
     security_headers(headers);
     response
@@ -157,7 +215,7 @@ async fn send_file(path: PathBuf, request: Request) -> Response {
 /// Router fallback: everything that is not an `/auth/*` API route.
 pub async fn serve(State(app): State<SharedApp>, request: Request) -> Response {
     let path = request.uri().path();
-    if path.starts_with("/auth/") || !app.cfg.serve_static {
+    if path.starts_with("/auth/") {
         return api_not_found().await;
     }
     if !matches!(*request.method(), Method::GET | Method::HEAD) {
@@ -171,6 +229,16 @@ pub async fn serve(State(app): State<SharedApp>, request: Request) -> Response {
             Ok(meta) if meta.is_file() => send_file(file, request).await,
             _ => plain_not_found(),
         },
+        Target::Profile(slug) => {
+            if !store::profile_exists(&app.cfg, &slug).await {
+                return plain_not_found();
+            }
+            if path.ends_with('/') {
+                send_file(app.cfg.profile_template_file.clone(), request).await
+            } else {
+                moved_permanently(&format!("{path}/"), request.uri().query())
+            }
+        }
         Target::Tree(target) => {
             if path.ends_with('/') {
                 return send_file(target.join("index.html"), request).await;
@@ -195,7 +263,7 @@ mod tests {
         // `Config::load`, and all of them set the same values.
         unsafe {
             std::env::set_var("SITE_ROOT", "/site");
-            std::env::remove_var("PROFILE_ROOT");
+            std::env::remove_var("PROFILE_TEMPLATE_FILE");
             std::env::remove_var("MEDIA_ROOT");
         }
         Config::load(None).unwrap()
@@ -225,13 +293,18 @@ mod tests {
             resolve(&cfg, "/profile"),
             Target::Redirect("/profile/".into())
         );
+        assert_eq!(resolve(&cfg, "/profile/"), file("/site/profile/index.html"));
         assert_eq!(
-            resolve(&cfg, "/profile/"),
-            Target::Tree(PathBuf::from("/site/profile/"))
+            resolve(&cfg, "/profile/index.html"),
+            file("/site/profile/index.html")
         );
         assert_eq!(
             resolve(&cfg, "/profile/yhym/"),
-            Target::Tree(PathBuf::from("/site/profile/yhym/"))
+            Target::Profile("yhym".into())
+        );
+        assert_eq!(
+            resolve(&cfg, "/profile/yhym-2"),
+            Target::Profile("yhym-2".into())
         );
         assert_eq!(
             resolve(&cfg, "/media/Build%201/a%20b.zip"),
@@ -255,6 +328,9 @@ mod tests {
             "/assets/%2e%2e/oauth/.env",
             "/assets/..%2foauth/.env",
             "/profile/../oauth/.env",
+            "/profile/yhym/index.html",
+            "/profile/Yhym/",
+            "/profile/a b/",
             "/media/abc/.delete-token",
             "/media//etc/passwd",
             "/assets/a\\..\\b",

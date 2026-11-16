@@ -107,10 +107,6 @@ async fn run() -> Result<(), String> {
     store::ensure_default_files(&cfg)
         .await
         .map_err(|error| format!("cannot prepare data files: {error}"))?;
-    store::sync_all_generated_profiles(&cfg)
-        .await
-        .map_err(|error| format!("cannot generate profile pages: {error}"))?;
-
     let address = format!("{}:{}", cfg.host, cfg.port);
     let listener = tokio::net::TcpListener::bind(&address)
         .await
@@ -123,33 +119,36 @@ async fn run() -> Result<(), String> {
 
     println!("Bladephoriafonk web server listening on http://{address}");
     println!("Site root: {}", cfg.site_root.display());
-    println!(
-        "Static files: {}",
-        if cfg.serve_static {
-            "served by this process"
-        } else {
-            "disabled (API only)"
-        }
-    );
     println!("Profile template: {}", cfg.profile_template_file.display());
-    println!("Profile output: {}", cfg.profile_root.display());
 
     let app =
         Arc::new(App::new(cfg).map_err(|error| format!("cannot start HTTP client: {error}"))?);
 
+    match app.load_sessions().await {
+        Ok(count) => println!("Restored sessions: {count}"),
+        Err(error) => eprintln!("[sessions] cannot restore sessions: {error}"),
+    }
+
     let janitor = app.clone();
     tokio::spawn(async move {
-        let mut tick = tokio::time::interval(Duration::from_secs(60));
+        let mut tick = tokio::time::interval(Duration::from_secs(15));
+        let mut ticks = 0u32;
         loop {
             tick.tick().await;
-            janitor.cleanup();
+            ticks = ticks.wrapping_add(1);
+            if ticks.is_multiple_of(4) {
+                janitor.cleanup();
+            }
+            janitor.save_sessions(false).await;
         }
     });
 
-    axum::serve(listener, router(app))
+    let served = axum::serve(listener, router(app.clone()))
         .with_graceful_shutdown(shutdown_signal())
         .await
-        .map_err(|error| format!("server error: {error}"))
+        .map_err(|error| format!("server error: {error}"));
+    app.save_sessions(true).await;
+    served
 }
 
 #[tokio::main]

@@ -9,7 +9,6 @@ use crate::util::normalize_admin_identity;
 pub struct Config {
     pub host: String,
     pub port: u16,
-    pub serve_static: bool,
 
     pub discord_origin: String,
     pub discord_client_id: String,
@@ -22,11 +21,10 @@ pub struct Config {
     pub cookie_secure: bool,
 
     pub site_root: PathBuf,
-    pub profile_root: PathBuf,
-    pub profile_source_root: PathBuf,
     pub profile_template_file: PathBuf,
     pub profile_db_file: PathBuf,
     pub changelog_db_file: PathBuf,
+    pub session_db_file: PathBuf,
     pub media_root: PathBuf,
 
     pub session_data_ttl_ms: i64,
@@ -145,9 +143,6 @@ impl Config {
         Ok(Self {
             host: env.string("HOST", "127.0.0.1"),
             port: env.number("PORT", 3001),
-            serve_static: !env
-                .string("SERVE_STATIC", "true")
-                .eq_ignore_ascii_case("false"),
 
             discord_origin: env
                 .string("DISCORD_ORIGIN", "https://discord.com")
@@ -164,11 +159,9 @@ impl Config {
             cookie_name: env.string("COOKIE_NAME", "bpf_session"),
             cookie_secure,
 
-            profile_root: env.path("PROFILE_ROOT", site_root.join("profile")),
-            profile_source_root: env.path("PROFILE_SOURCE_ROOT", site_root.join("src/profile")),
             profile_template_file: env.path(
                 "PROFILE_TEMPLATE_FILE",
-                site_root.join("oauth/profile-template.html"),
+                site_root.join("profile/index.html"),
             ),
             profile_db_file: env.path(
                 "PROFILE_DB_FILE",
@@ -177,6 +170,10 @@ impl Config {
             changelog_db_file: env.path(
                 "CHANGELOG_DB_FILE",
                 site_root.join("oauth/data/changelog.json"),
+            ),
+            session_db_file: env.path(
+                "SESSION_DB_FILE",
+                site_root.join("oauth/data/sessions.json"),
             ),
             media_root: env.path("MEDIA_ROOT", site_root.join("media")),
             site_root,

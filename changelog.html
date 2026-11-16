@@ -238,13 +238,13 @@
     </header>
 
     <section class="group admin-panel" id="admin-panel" hidden>
-      <h2 data-i18n="create_heading">Create post</h2>
+      <h2 data-i18n="create_heading">New post</h2>
       <div class="admin-fields">
         <label for="post-title" data-i18n="field_title">Title (optional)</label>
         <input id="post-title" type="text" data-i18n-placeholder="field_title_placeholder" placeholder="Post title">
 
         <label for="post-content" data-i18n="field_content">Message</label>
-        <textarea id="post-content" data-i18n-placeholder="field_content_placeholder" placeholder="Write your update"></textarea>
+        <textarea id="post-content" data-i18n-placeholder="field_content_placeholder" placeholder="Describe what changed"></textarea>
         <p class="markdown-help"><a href="https://support.discord.com/hc/en-us/articles/210298617-Markdown-Text-101-Chat-Formatting-Bold-Italic-Underline" target="_blank" rel="noreferrer" data-i18n="markdown_help">Supported formatting: Discord Markdown 101</a></p>
 
         <label for="post-media-url" data-i18n="field_media_url">Media URL (image or video, optional)</label>
@@ -257,7 +257,7 @@
           <option value="video" data-i18n="media_video">Video</option>
         </select>
 
-        <button class="create-btn" id="create-post-btn" type="button" data-i18n="create_button">Create</button>
+        <button class="create-btn" id="create-post-btn" type="button" data-i18n="create_button">Publish</button>
         <p class="status-note" id="create-status"></p>
       </div>
     </section>
@@ -289,23 +289,23 @@
         nav_home: "Home",
         nav_server: "Server",
         nav_admin: "Administration",
-        create_heading: "Create post",
+        create_heading: "New post",
         field_title: "Title (optional)",
         field_title_placeholder: "Post title",
         field_content: "Message",
-        field_content_placeholder: "Write your update",
+        field_content_placeholder: "Describe what changed",
         markdown_help: "Supported formatting: Discord Markdown 101",
-        field_media_url: "Media URL (image or video, optional)",
+        field_media_url: "Link to an image or video (optional)",
         field_media_placeholder: "https://example.com/file.mp4",
-        field_media_type: "Media type",
-        media_auto: "Auto detect",
+        field_media_type: "File type",
+        media_auto: "Detect automatically",
         media_image: "Image",
         media_video: "Video",
-        create_button: "Create",
-        creating_button: "Creating...",
-        create_success: "Post created.",
-        create_error: "Could not create post.",
-        read_error: "Could not load changelog.",
+        create_button: "Publish",
+        creating_button: "Publishing...",
+        create_success: "Post published.",
+        create_error: "Could not publish the post.",
+        read_error: "Could not load the changelog.",
         empty_posts: "No posts yet.",
         untitled_post: "Untitled post",
         post_meta: "By {author} on {date}"
@@ -313,29 +313,29 @@
       pl: {
         page_title: "Bladephoriafonk | Dziennik zmian",
         heading: "Dziennik zmian",
-        nav_home: "Strona Glowna",
+        nav_home: "Strona główna",
         nav_server: "Serwer",
         nav_admin: "Administracja",
-        create_heading: "Utworz wpis",
-        field_title: "Tytul (opcjonalnie)",
-        field_title_placeholder: "Tytul wpisu",
-        field_content: "Wiadomosc",
-        field_content_placeholder: "Napisz aktualizacje",
-        markdown_help: "Obslugiwane formatowanie: Discord Markdown 101",
-        field_media_url: "URL medium (obraz lub wideo, opcjonalnie)",
+        create_heading: "Nowy wpis",
+        field_title: "Tytuł (opcjonalnie)",
+        field_title_placeholder: "Tytuł wpisu",
+        field_content: "Treść",
+        field_content_placeholder: "Napisz, co się zmieniło",
+        markdown_help: "Obsługiwane formatowanie: Discord Markdown 101",
+        field_media_url: "Link do obrazu lub wideo (opcjonalnie)",
         field_media_placeholder: "https://example.com/file.mp4",
-        field_media_type: "Typ medium",
+        field_media_type: "Rodzaj pliku",
         media_auto: "Wykryj automatycznie",
         media_image: "Obraz",
         media_video: "Wideo",
-        create_button: "Utworz",
-        creating_button: "Tworzenie...",
-        create_success: "Wpis zostal utworzony.",
-        create_error: "Nie udalo sie utworzyc wpisu.",
-        read_error: "Nie udalo sie zaladowac dziennika zmian.",
-        empty_posts: "Brak wpisow.",
-        untitled_post: "Wpis bez tytulu",
-        post_meta: "Autor {author}, {date}"
+        create_button: "Opublikuj",
+        creating_button: "Publikowanie...",
+        create_success: "Wpis został opublikowany.",
+        create_error: "Nie udało się opublikować wpisu.",
+        read_error: "Nie udało się wczytać dziennika zmian.",
+        empty_posts: "Brak wpisów.",
+        untitled_post: "Wpis bez tytułu",
+        post_meta: "Autor: {author}, {date}"
       }
     };
 

@@ -10,14 +10,13 @@ program (`bladephoria-web`) obsluguje:
 - publiczne dane serwerow Discord pobierane po stronie backendu,
 - usuwanie opublikowanych mediow po tokenie.
 
-Ten katalog (`oauth/`) trzyma juz tylko konfiguracje i dane: `.env`,
-`profile-template.html` i `data/`.
+Ten katalog (`oauth/`) trzyma juz tylko konfiguracje i dane: `.env` i `data/`.
 
 ## Co jest wazne
 
-- Trzymaj `.env`, `profiles.json` i `changelog.json` poza katalogiem publicznym strony.
-- Serwer nie wystawia `oauth/`, `src/`, `backend/` ani plikow zaczynajacych sie od kropki.
-- Publiczne strony profili korzystaja ze wspolnych assetow, wiec poprawki profilu propaguja sie po ponownym syncu backendu.
+- `.env` i pliki w `data/` nie sa nigdy wystawiane publicznie.
+- Serwer nie wystawia `oauth/`, `backend/`, `deploy/` ani plikow zaczynajacych sie od kropki.
+- Wszystkie profile uzywaja jednego szablonu `profile/index.html`; zmiana szablonu dziala od razu dla kazdego profilu.
 - Sesje i publiczne dane serwerow sa cache'owane, zeby ograniczyc ruch do Discord API.
 
 ## Wymagane dane w `.env`
@@ -81,17 +80,15 @@ Opis: [deploy/DEPLOY.md](../deploy/DEPLOY.md). Przyklady:
 
 ## Dane i pliki
 
-- `PROFILE_TEMPLATE_FILE` wskazuje wspolny szablon profilu.
-- `PROFILE_ROOT` i `PROFILE_SOURCE_ROOT` dostaja wygenerowane profile.
-- `PROFILE_DB_FILE` przechowuje profile i ustawienia publiczne.
-- `CHANGELOG_DB_FILE` przechowuje wpisy changeloga.
-- `MEDIA_ROOT` to katalog serwowany pod `/media/`.
-
-Formaty plikow danych sa takie same jak w wersji Node, wiec istniejace
-`profiles.json` i `changelog.json` dzialaja bez migracji.
+- `PROFILE_TEMPLATE_FILE` - szablon profilu (domyslnie `profile/index.html`), podawany pod `/profile/<slug>/` dla istniejacych profili.
+- `PROFILE_DB_FILE` - profile i ustawienia publiczne.
+- `CHANGELOG_DB_FILE` - wpisy changeloga.
+- `SESSION_DB_FILE` - zapisane sesje logowania (prawa 0600).
+- `MEDIA_ROOT` - katalog serwowany pod `/media/`.
 
 ## Uwagi
 
-- Sesje sa trzymane w pamieci procesu. Restart backendu wyloguje aktywne sesje.
-- Jesli zmienisz wspolny szablon profilu, backend przy starcie zsynchronizuje wygenerowane strony profilowe z aktualna wersja.
+- Sesje sa zapisywane do pliku, wiec restart backendu nie wylogowuje uzytkownikow.
+- Nieudane logowanie wraca na strone z `?oauth_error=<kod>`; `site-lang.js` pokazuje wtedy komunikat.
+- Zaproszenia Discord sa w `backend/src/discord.rs` (lista kodow w kolejnosci). Gdy pierwszy kod wygasnie, backend bierze nastepny, a strona `/server` sama pokazuje dzialajacy link.
 - `GET /auth/server-data` korzysta z cache, a reczny refresh na froncie moze wymusic odswiezenie.

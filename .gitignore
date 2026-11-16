@@ -22,3 +22,7 @@ Thumbs.db
 
 # Rust build output
 target/
+
+# Runtime data written by the server
+oauth/data/changelog.json
+oauth/data/sessions.json

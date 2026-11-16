@@ -3,7 +3,7 @@
 //! shapes are identical to the previous Node backend.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use axum::body::Body;
@@ -60,6 +60,8 @@ pub struct App {
     discord: Discord,
     states: Mutex<HashMap<String, LoginState>>,
     sessions: Mutex<HashMap<String, Arc<Session>>>,
+    /// Set when sessions changed since they were last written to disk.
+    sessions_dirty: AtomicBool,
     invite_cache: Mutex<HashMap<&'static str, InviteCacheEntry>>,
     profile_lock: tokio::sync::Mutex<()>,
     changelog_lock: tokio::sync::Mutex<()>,
@@ -78,6 +80,7 @@ impl App {
             cfg,
             states: Mutex::default(),
             sessions: Mutex::default(),
+            sessions_dirty: AtomicBool::new(false),
             invite_cache: Mutex::default(),
             profile_lock: tokio::sync::Mutex::default(),
             changelog_lock: tokio::sync::Mutex::default(),
@@ -88,9 +91,98 @@ impl App {
     pub fn cleanup(&self) {
         let now = now_ms();
         lock(&self.states).retain(|_, state| now - state.created_at <= STATE_TTL_MS);
-        lock(&self.sessions).retain(|_, session| {
+
+        let mut sessions = lock(&self.sessions);
+        let before = sessions.len();
+        sessions.retain(|_, session| {
             now - session.last_seen_at.load(Ordering::Relaxed) <= SESSION_TTL_MS
         });
+        if sessions.len() != before {
+            self.sessions_dirty.store(true, Ordering::Relaxed);
+        }
+    }
+
+    /// Restores the sessions saved by a previous run, so a restart does not
+    /// log everybody out.
+    pub async fn load_sessions(&self) -> Result<usize, Fail> {
+        let Some(saved) = store::read_json_file(&self.cfg.session_db_file).await? else {
+            return Ok(0);
+        };
+        let Some(entries) = saved.get("sessions").and_then(Value::as_object) else {
+            return Ok(0);
+        };
+
+        let now = now_ms();
+        let number = |entry: &Value, key: &str| entry.get(key).and_then(Value::as_i64).unwrap_or(0);
+        let optional =
+            |entry: &Value, key: &str| entry.get(key).filter(|value| !value.is_null()).cloned();
+
+        let mut sessions = lock(&self.sessions);
+        for (session_id, entry) in entries {
+            let last_seen_at = number(entry, "last_seen_at");
+            let access_token = js_str(entry.get("access_token"));
+            if now - last_seen_at > SESSION_TTL_MS || access_token.is_empty() {
+                continue;
+            }
+            let data = SessionData {
+                updated_at: number(entry, "updated_at"),
+                access_token,
+                refresh_token: js_str(entry.get("refresh_token")),
+                expires_at: number(entry, "expires_at"),
+                user: optional(entry, "user"),
+                connections: entry
+                    .get("connections")
+                    .cloned()
+                    .unwrap_or_else(|| json!([])),
+                guild_profile: optional(entry, "guild_profile"),
+                profile: optional(entry, "profile"),
+            };
+            sessions.insert(
+                session_id.clone(),
+                Arc::new(Session {
+                    last_seen_at: AtomicI64::new(last_seen_at),
+                    data: tokio::sync::Mutex::new(data),
+                }),
+            );
+        }
+        Ok(sessions.len())
+    }
+
+    /// Writes the sessions to disk when they changed (or always with `force`,
+    /// used on shutdown to keep the last-seen times).
+    pub async fn save_sessions(&self, force: bool) {
+        if !self.sessions_dirty.swap(false, Ordering::Relaxed) && !force {
+            return;
+        }
+
+        let sessions: Vec<(String, Arc<Session>)> = lock(&self.sessions)
+            .iter()
+            .map(|(session_id, session)| (session_id.clone(), session.clone()))
+            .collect();
+        let mut entries = Map::new();
+        for (session_id, session) in sessions {
+            let data = session.data.lock().await;
+            entries.insert(
+                session_id,
+                json!({
+                    "last_seen_at": session.last_seen_at.load(Ordering::Relaxed),
+                    "updated_at": data.updated_at,
+                    "access_token": data.access_token,
+                    "refresh_token": data.refresh_token,
+                    "expires_at": data.expires_at,
+                    "user": data.user,
+                    "connections": data.connections,
+                    "guild_profile": data.guild_profile,
+                    "profile": data.profile,
+                }),
+            );
+        }
+
+        let payload = json!({ "version": 1, "sessions": entries });
+        if let Err(error) = store::write_private_json(&self.cfg.session_db_file, &payload).await {
+            self.sessions_dirty.store(true, Ordering::Relaxed);
+            eprintln!("[sessions] cannot save sessions: {error}");
+        }
     }
 
     fn is_admin(&self, user: Option<&Value>) -> bool {
@@ -128,7 +220,9 @@ impl App {
 
     /// Ends a session whose Discord data could not be refreshed.
     fn expire_session(&self, session_id: &str, status: StatusCode, body: Value) -> Response {
-        lock(&self.sessions).remove(session_id);
+        if lock(&self.sessions).remove(session_id).is_some() {
+            self.sessions_dirty.store(true, Ordering::Relaxed);
+        }
         let mut response = json_response(status, &body);
         response
             .headers_mut()
@@ -360,6 +454,7 @@ async fn update_session_data(
     session.guild_profile = guild_profile;
     session.updated_at = now_ms();
     session.profile = Some(profile);
+    app.sessions_dirty.store(true, Ordering::Relaxed);
     Ok(())
 }
 
@@ -459,7 +554,17 @@ pub async fn discord_callback(
         return Ok(redirect(&format!("{return_to}?oauth_error=missing_code")));
     };
 
-    let token = app.discord.exchange_code(&app.cfg, &code).await?;
+    // A failed login sends the visitor back to the site with a readable
+    // message instead of a raw error response.
+    let login_failed = |error: Fail| {
+        eprintln!("[oauth] login failed: {error}");
+        redirect(&format!("{return_to}?oauth_error=login_failed"))
+    };
+
+    let token = match app.discord.exchange_code(&app.cfg, &code).await {
+        Ok(token) => token,
+        Err(error) => return Ok(login_failed(error)),
+    };
     let mut data = SessionData {
         updated_at: 0,
         access_token: js_str(token.get("access_token")),
@@ -470,7 +575,9 @@ pub async fn discord_callback(
         guild_profile: None,
         profile: None,
     };
-    update_session_data(&app, &mut data, true).await?;
+    if let Err(error) = update_session_data(&app, &mut data, true).await {
+        return Ok(login_failed(error));
+    }
 
     let destination = data
         .profile
@@ -482,6 +589,7 @@ pub async fn discord_callback(
         .to_owned();
 
     let session_id = random_hex(24);
+    app.sessions_dirty.store(true, Ordering::Relaxed);
     lock(&app.sessions).insert(
         session_id.clone(),
         Arc::new(Session {
@@ -579,7 +687,7 @@ async fn read_invite_profile(app: SharedApp, server: &'static ServerConfig, forc
     let cached = {
         let cache = lock(&app.invite_cache);
         cache
-            .get(server.invite_code)
+            .get(server.primary_invite())
             .map(|entry| (entry.fetched_at, entry.payload.clone()))
     };
 
@@ -595,7 +703,7 @@ async fn read_invite_profile(app: SharedApp, server: &'static ServerConfig, forc
     match app.discord.invite_snapshot(server).await {
         Ok(mut payload) => {
             lock(&app.invite_cache).insert(
-                server.invite_code,
+                server.primary_invite(),
                 InviteCacheEntry {
                     fetched_at: now_ms(),
                     payload: payload.clone(),
@@ -612,7 +720,7 @@ async fn read_invite_profile(app: SharedApp, server: &'static ServerConfig, forc
                 return Value::Object(payload);
             }
 
-            let mut payload = discord::server_identity(server);
+            let mut payload = discord::server_identity(server, 0);
             let empty = json!({
                 "guild_id": "",
                 "description": "",
@@ -622,7 +730,7 @@ async fn read_invite_profile(app: SharedApp, server: &'static ServerConfig, forc
                 "premium_tier": 0,
                 "premium_subscription_count": 0,
                 "icon_url": "",
-                "source_url": app.discord.invite_url(server.invite_code),
+                "source_url": app.discord.invite_url(server.primary_invite()),
                 "updated_at": "",
                 "stale": true,
                 "cached": false,
@@ -775,6 +883,7 @@ pub async fn profile_mode(
     };
 
     data.profile = Some(profile.clone());
+    app.sessions_dirty.store(true, Ordering::Relaxed);
     Ok(json_response(
         StatusCode::OK,
         &json!({ "ok": true, "profile": profile }),

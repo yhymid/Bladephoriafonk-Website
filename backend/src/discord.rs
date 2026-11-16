@@ -12,21 +12,24 @@ use crate::util::{js_str, now_iso, truthy};
 pub struct ServerConfig {
     pub key: &'static str,
     pub name: &'static str,
-    pub invite_code: &'static str,
-    pub main_url: &'static str,
-    pub alt_url: &'static str,
-    /// Tried in order when the main invite no longer exists.
-    pub backup_invite_codes: &'static [&'static str],
+    /// Invite codes in order of preference. The first one that Discord still
+    /// accepts is used for the data and shown as the main link; the one after
+    /// it is shown as the alternative link.
+    pub invite_codes: &'static [&'static str],
+}
+
+impl ServerConfig {
+    pub fn primary_invite(&self) -> &'static str {
+        self.invite_codes.first().copied().unwrap_or_default()
+    }
 }
 
 pub const PUBLIC_SERVERS: [ServerConfig; 2] = [
     ServerConfig {
         key: "blade",
         name: "Bladephoriafonk",
-        invite_code: "Nh7XnSMhCp",
-        main_url: "https://discord.gg/Nh7XnSMhCp",
-        alt_url: "https://discord.gg/2xTr8pmk36",
-        backup_invite_codes: &[
+        invite_codes: &[
+            "Nh7XnSMhCp",
             "2xTr8pmk36",
             "7vxYEgKdgN",
             "umZ3rMnyXp",
@@ -37,10 +40,8 @@ pub const PUBLIC_SERVERS: [ServerConfig; 2] = [
     ServerConfig {
         key: "pmc",
         name: "PMC Ashley Group",
-        invite_code: "2upsTHV5Bv",
-        main_url: "https://discord.gg/2upsTHV5Bv",
-        alt_url: "",
-        backup_invite_codes: &[
+        invite_codes: &[
+            "2upsTHV5Bv",
             "8MAjxgmnAF",
             "BAVcR9Tm9W",
             "D7ZggjWSxc",
@@ -66,6 +67,10 @@ pub const PUBLIC_SERVERS: [ServerConfig; 2] = [
         ],
     },
 ];
+
+fn invite_link(invite_code: &str) -> String {
+    format!("https://discord.gg/{invite_code}")
+}
 
 pub struct Discord {
     http: reqwest::Client,
@@ -292,14 +297,14 @@ impl Discord {
     }
 
     /// Public invite data of a server. A dead invite (404) moves on to the
-    /// next backup code; any other failure (network, rate limit) stops, so an
-    /// outage never fans out into one request per backup code.
+    /// next code; any other failure (network, rate limit) stops, so an outage
+    /// never fans out into one request per code.
     pub async fn invite_snapshot(&self, server: &ServerConfig) -> Result<Map<String, Value>, Fail> {
         let mut last_error = Fail("invite_fetch_failed:unknown".to_owned());
-        for invite_code in std::iter::once(&server.invite_code).chain(server.backup_invite_codes) {
+        for (index, invite_code) in server.invite_codes.iter().enumerate() {
             match self.request_invite_snapshot(invite_code).await {
                 Ok(snapshot) => {
-                    let mut payload = server_identity(server);
+                    let mut payload = server_identity(server, index);
                     payload.extend(snapshot);
                     return Ok(payload);
                 }
@@ -316,13 +321,22 @@ impl Discord {
     }
 }
 
-pub fn server_identity(server: &ServerConfig) -> Map<String, Value> {
+/// Name and links of a server, with `working` being the index of the invite
+/// code to present as the main link.
+pub fn server_identity(server: &ServerConfig, working: usize) -> Map<String, Value> {
+    let link = |index: usize| {
+        server
+            .invite_codes
+            .get(index)
+            .map(|code| invite_link(code))
+            .unwrap_or_default()
+    };
     let identity = json!({
         "key": server.key,
         "name": server.name,
-        "invite_code": server.invite_code,
-        "main_url": server.main_url,
-        "alt_url": server.alt_url,
+        "invite_code": server.primary_invite(),
+        "main_url": link(working),
+        "alt_url": link(working + 1),
     });
     match identity {
         Value::Object(map) => map,

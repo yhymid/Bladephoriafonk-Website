@@ -20,7 +20,7 @@ pub async fn path_exists(path: &Path) -> bool {
 }
 
 /// Reads a JSON file; a missing or blank file yields `None`.
-async fn read_json_file(path: &Path) -> Result<Option<Value>, Fail> {
+pub async fn read_json_file(path: &Path) -> Result<Option<Value>, Fail> {
     let text = match fs::read_to_string(path).await {
         Ok(text) => text,
         Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
@@ -54,6 +54,31 @@ async fn write_json_atomic(path: &Path, payload: &Value) -> Result<(), Fail> {
 
     let temp = with_suffix(format!(".{}.{}.tmp", std::process::id(), now_ms()));
     fs::write(&temp, body).await?;
+    fs::rename(&temp, path).await?;
+    Ok(())
+}
+
+/// Writes compact JSON readable only by the service user (mode 0600), for
+/// files holding secrets such as session tokens.
+pub async fn write_private_json(path: &Path, payload: &Value) -> Result<(), Fail> {
+    use tokio::io::AsyncWriteExt;
+
+    if let Some(directory) = path.parent() {
+        fs::create_dir_all(directory).await?;
+    }
+    let mut temp = path.as_os_str().to_owned();
+    temp.push(format!(".{}.tmp", std::process::id()));
+
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(&temp)
+        .await?;
+    file.write_all(payload.to_string().as_bytes()).await?;
+    file.flush().await?;
+    drop(file);
     fs::rename(&temp, path).await?;
     Ok(())
 }
@@ -94,52 +119,18 @@ pub fn find_profile_by_slug<'a>(users: &'a Users, slug: &str) -> Option<&'a Valu
         .find(|entry| entry.get("slug").and_then(Value::as_str) == Some(slug))
 }
 
-/// Writes the shared profile template as `/profile/<slug>/index.html`.
-pub async fn ensure_profile_page(cfg: &Config, slug: &str) -> Result<(), Fail> {
-    let slug = sanitize_slug(slug);
-    if slug.is_empty() {
-        return Err(Fail("invalid_profile_slug".to_owned()));
-    }
-
-    let template = fs::read(&cfg.profile_template_file).await?;
-    for root in [&cfg.profile_root, &cfg.profile_source_root] {
-        let directory = root.join(&slug);
-        fs::create_dir_all(&directory).await?;
-        fs::write(directory.join("index.html"), &template).await?;
-    }
-    Ok(())
-}
-
-pub async fn remove_profile_page(cfg: &Config, slug: &str) -> Result<(), Fail> {
-    let slug = sanitize_slug(slug);
-    if slug.is_empty() {
-        return Ok(());
-    }
-    for root in [&cfg.profile_root, &cfg.profile_source_root] {
-        match fs::remove_dir_all(root.join(&slug)).await {
-            Ok(()) => {}
-            Err(error) if error.kind() == ErrorKind::NotFound => {}
-            Err(error) => return Err(error.into()),
+/// Whether `slug` belongs to a registered profile.
+pub async fn profile_exists(cfg: &Config, slug: &str) -> bool {
+    match read_profile_db(cfg).await {
+        Ok(users) => find_profile_by_slug(&users, slug).is_some(),
+        Err(error) => {
+            eprintln!("[profiles] cannot read profile database: {error}");
+            false
         }
     }
-    Ok(())
 }
 
-/// Regenerates every known profile page so template changes propagate.
-pub async fn sync_all_generated_profiles(cfg: &Config) -> Result<(), Fail> {
-    let users = read_profile_db(cfg).await?;
-    let slugs: HashSet<String> = users
-        .values()
-        .map(entry_slug)
-        .filter(|slug| !slug.is_empty())
-        .collect();
-    for slug in slugs {
-        ensure_profile_page(cfg, &slug).await?;
-    }
-    Ok(())
-}
-
-async fn create_unique_slug(cfg: &Config, users: &Users, base_value: &str) -> String {
+fn create_unique_slug(users: &Users, base_value: &str) -> String {
     let used: HashSet<String> = users
         .values()
         .map(entry_slug)
@@ -149,10 +140,7 @@ async fn create_unique_slug(cfg: &Config, users: &Users, base_value: &str) -> St
     let mut slug = base.clone();
     let mut suffix = 1;
 
-    while used.contains(&slug)
-        || path_exists(&cfg.profile_root.join(&slug)).await
-        || path_exists(&cfg.profile_source_root.join(&slug)).await
-    {
+    while used.contains(&slug) {
         suffix += 1;
         slug = format!("{base}-{suffix}");
     }
@@ -187,10 +175,8 @@ pub async fn upsert_profile(cfg: &Config, user: &Value) -> Result<Value, Fail> {
             .map(js_str)
             .find(|name| !name.is_empty())
             .unwrap_or_else(|| "user".to_owned());
-        slug = create_unique_slug(cfg, &users, &preferred).await;
+        slug = create_unique_slug(&users, &preferred);
     }
-
-    ensure_profile_page(cfg, &slug).await?;
 
     let public_mode = current
         .get("public_mode")
@@ -253,7 +239,6 @@ pub async fn delete_profile(cfg: &Config, user_id: &str) -> Result<Option<String
 
     users.remove(user_id);
     write_profile_db(cfg, users).await?;
-    remove_profile_page(cfg, &slug).await?;
     Ok(Some(slug))
 }
 
