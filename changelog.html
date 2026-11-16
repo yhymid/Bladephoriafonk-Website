@@ -604,12 +604,16 @@
         article.className = "entry";
 
         const heading = document.createElement("h2");
-        heading.textContent = (post.title && post.title.trim()) || t("untitled_post");
+        // Posts may carry a Polish version (title_pl / content_pl).
+        const polish = window.SiteLang.getLanguage() === "pl";
+        const title = (polish && post.title_pl) || post.title || "";
+        const body = (polish && post.content_pl) || post.content || "";
+        heading.textContent = title.trim() || t("untitled_post");
         article.appendChild(heading);
 
         const content = document.createElement("div");
         content.className = "entry-content";
-        content.innerHTML = renderMarkdown(post.content || "");
+        content.innerHTML = renderMarkdown(body);
         article.appendChild(content);
 
         if (post.media_url) {

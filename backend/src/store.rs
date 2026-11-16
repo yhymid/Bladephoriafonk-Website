@@ -268,7 +268,7 @@ pub fn normalize_changelog_post(input: &Value) -> Option<Value> {
         .filter(|id| !id.is_empty())
         .unwrap_or_else(|| random_hex(10));
 
-    Some(json!({
+    let mut post = json!({
         "id": id,
         "title": text("title").unwrap_or_default().trim(),
         "content": text("content").unwrap_or_default(),
@@ -280,7 +280,15 @@ pub fn normalize_changelog_post(input: &Value) -> Option<Value> {
             "username": author("username"),
             "global_name": author("global_name"),
         },
-    }))
+    });
+
+    // Optional Polish version of the post, shown when the site is in Polish.
+    for key in ["title_pl", "content_pl"] {
+        if let Some(translated) = text(key).filter(|value| !value.trim().is_empty()) {
+            post[key] = json!(translated);
+        }
+    }
+    Some(post)
 }
 
 pub async fn read_changelog_posts(cfg: &Config) -> Result<Vec<Value>, Fail> {
@@ -346,6 +354,19 @@ mod tests {
                 "created_by": { "id": "1", "username": "yhym", "global_name": "" },
             })
         );
+        let translated = normalize_changelog_post(&json!({
+            "id": "a",
+            "content": "Body",
+            "title_pl": "Tytuł",
+            "content_pl": "Treść",
+            "created_at": "2026-06-04T13:26:07.036Z",
+        }))
+        .unwrap();
+        assert_eq!(translated["title_pl"], "Tytuł");
+        assert_eq!(translated["content_pl"], "Treść");
+        assert!(post.get("title_pl").is_none());
+        assert!(post.get("content_pl").is_none());
+
         assert!(normalize_changelog_post(&json!("text")).is_none());
         assert!(normalize_changelog_post(&json!(null)).is_none());
     }
