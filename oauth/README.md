@@ -1,17 +1,23 @@
 # Discord OAuth2 + Website backend
 
-Ten backend obsluguje:
-- logowanie Discord OAuth2,
-- profile `/profile/<slug>/`,
-- tryb publiczny profilu,
-- changelog,
-- publiczne dane serwerow Discord pobierane po stronie backendu.
+Backend jest napisany w Ruscie i lezy w [`backend/`](../backend). Jeden
+program (`bladephoria-web`) obsluguje:
 
-## Co jest teraz wazne
+- strony i assety (`/`, `/server`, `/administracja`, `/changelog`, `/assets/`, `/profile/`, `/media/`),
+- logowanie Discord OAuth2,
+- profile `/profile/<slug>/` i tryb publiczny profilu,
+- changelog,
+- publiczne dane serwerow Discord pobierane po stronie backendu,
+- usuwanie opublikowanych mediow po tokenie.
+
+Ten katalog (`oauth/`) trzyma juz tylko konfiguracje i dane: `.env`,
+`profile-template.html` i `data/`.
+
+## Co jest wazne
 
 - Trzymaj `.env`, `profiles.json` i `changelog.json` poza katalogiem publicznym strony.
-- Nie wystawiaj `oauth/` ani `src/` przez Nginx.
-- Publiczne strony profili korzystaja ze wspolnych assetow, wiec poprawki profilu propagują sie po ponownym syncu backendu.
+- Serwer nie wystawia `oauth/`, `src/`, `backend/` ani plikow zaczynajacych sie od kropki.
+- Publiczne strony profili korzystaja ze wspolnych assetow, wiec poprawki profilu propaguja sie po ponownym syncu backendu.
 - Sesje i publiczne dane serwerow sa cache'owane, zeby ograniczyc ruch do Discord API.
 
 ## Wymagane dane w `.env`
@@ -25,44 +31,44 @@ Domyslny redirect dla domeny:
 
 - `https://bladephoriafonk.xyz/auth/discord/callback`
 
+Pelna lista zmiennych: [.env.example](.env.example). Zmienne ustawione
+w srodowisku maja pierwszenstwo przed plikiem `--env-file`.
+
 ## Lokalne uruchomienie
 
 ```bash
-cd oauth
-cp .env.example .env
-npm start
-```
-
-Backend startuje domyslnie na `127.0.0.1:3001`.
-
-Dla calej strony lokalnie:
-
-```bash
-cd ..
-DEV_PORT=8080 DEV_OAUTH_ORIGIN=http://127.0.0.1:3001 node dev-server.mjs
+cp oauth/.env.example oauth/.env   # uzupelnij dane Discorda, ustaw lokalne sciezki
+cd backend
+SITE_ROOT=.. PORT=8080 BASE_URL=http://127.0.0.1:8080 cargo run --release -- --env-file ../oauth/.env
 ```
 
 Potem otworz:
 
 - `http://127.0.0.1:8080`
 
+Osobny serwer deweloperski nie jest juz potrzebny - ten sam program serwuje
+strony i API.
+
+Testy i kontrola kodu:
+
+```bash
+cd backend
+cargo test
+cargo clippy --all-targets -- -D warnings
+```
+
 ## Wdrozenie na VPS
 
-Gotowe przyklady sa w:
+Opis: [deploy/DEPLOY.md](../deploy/DEPLOY.md). Przyklady:
 
-- [deploy/nginx-site.conf.example](/run/media/anon/Nowy/Marmak/git.marmak.net.pl/Website/deploy/nginx-site.conf.example)
-- [deploy/bladephoria-oauth.service.example](/run/media/anon/Nowy/Marmak/git.marmak.net.pl/Website/deploy/bladephoria-oauth.service.example)
-
-Najwazniejsze zasady:
-
-1. Katalog publiczny Nginx ustaw na `Website/`.
-2. Zablokuj publiczny dostep do `oauth/`, `src/` i dotfiles.
-3. Proxy tylko `/auth/` do backendu OAuth.
-4. Pliki danych trzymaj np. w `/var/lib/bladephoria/`.
-5. Plik `.env` trzymaj poza katalogiem WWW.
+- [deploy/nginx-site.conf.example](../deploy/nginx-site.conf.example)
+- [deploy/bladephoria-oauth.service.example](../deploy/bladephoria-oauth.service.example)
 
 ## Endpointy
 
+- `GET /health`
+- `GET /auth/discord/login?return_to=<sciezka>`
+- `GET /auth/discord/callback`
 - `GET /auth/session`
 - `GET /auth/public-profile?slug=<slug>`
 - `POST /auth/profile-mode`
@@ -71,6 +77,7 @@ Najwazniejsze zasady:
 - `GET /auth/changelog`
 - `POST /auth/changelog`
 - `GET /auth/server-data`
+- `POST /auth/media-delete`
 
 ## Dane i pliki
 
@@ -78,9 +85,13 @@ Najwazniejsze zasady:
 - `PROFILE_ROOT` i `PROFILE_SOURCE_ROOT` dostaja wygenerowane profile.
 - `PROFILE_DB_FILE` przechowuje profile i ustawienia publiczne.
 - `CHANGELOG_DB_FILE` przechowuje wpisy changeloga.
+- `MEDIA_ROOT` to katalog serwowany pod `/media/`.
+
+Formaty plikow danych sa takie same jak w wersji Node, wiec istniejace
+`profiles.json` i `changelog.json` dzialaja bez migracji.
 
 ## Uwagi
 
-- Sesje nadal sa trzymane w pamieci procesu. Restart backendu wyloguje aktywne sesje.
+- Sesje sa trzymane w pamieci procesu. Restart backendu wyloguje aktywne sesje.
 - Jesli zmienisz wspolny szablon profilu, backend przy starcie zsynchronizuje wygenerowane strony profilowe z aktualna wersja.
 - `GET /auth/server-data` korzysta z cache, a reczny refresh na froncie moze wymusic odswiezenie.

@@ -19,3 +19,6 @@ oauth/data/*.bak
 # OS/editor noise
 .DS_Store
 Thumbs.db
+
+# Rust build output
+target/

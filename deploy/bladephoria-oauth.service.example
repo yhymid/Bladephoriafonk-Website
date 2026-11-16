@@ -1,13 +1,12 @@
 [Unit]
-Description=Bladephoria Discord OAuth Server
+Description=Bladephoria Website Server (Rust)
 After=network.target
 
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/home/ubuntu/Main Files/website/oauth
-EnvironmentFile=/home/ubuntu/.bladephoria-oauth.env
-ExecStart=/usr/bin/node --env-file=/home/ubuntu/.bladephoria-oauth.env /home/ubuntu/Main Files/website/oauth/discord-auth-server.mjs
+WorkingDirectory=/home/ubuntu/Main Files/Website
+ExecStart="/home/ubuntu/Main Files/Website/backend/target/release/bladephoria-web" --env-file "/home/ubuntu/Main Files/Website/oauth/.env"
 Restart=always
 RestartSec=3
 

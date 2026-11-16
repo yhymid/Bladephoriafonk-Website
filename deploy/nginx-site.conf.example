@@ -5,71 +5,31 @@ server {
     return 301 https://$host$request_uri;
 }
 
+# Nginx only terminates TLS. Pages, assets, media and /auth/* are all served
+# by the Rust server, which also sets the security headers and decides which
+# paths are public.
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
     server_name bladephoriafonk.xyz www.bladephoriafonk.xyz;
 
-    root /home/ubuntu/Main Files/website;
-    index index.html;
+    ssl_certificate /etc/letsencrypt/live/bladephoriafonk.xyz/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bladephoriafonk.xyz/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Frame-Options "DENY" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; media-src 'self' https:; connect-src 'self' https://discord.com https://cdn.discordapp.com; font-src 'self' data:" always;
+    # Changelog posts may carry large JSON bodies (CHANGELOG_JSON_BODY_LIMIT_BYTES).
+    client_max_body_size 32m;
 
-    location ~ /\.(?!well-known) {
-        return 404;
-    }
-
-    location ^~ /oauth/ {
-        return 404;
-    }
-
-    location ^~ /src/ {
-        return 404;
-    }
-
-    location /auth/ {
+    location / {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
+        proxy_set_header Connection "";
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
-    location = / {
-        try_files /index.html =404;
-    }
-
-    location = /server {
-        try_files /server.html =404;
-    }
-
-    location = /administracja {
-        try_files /administracja.html =404;
-    }
-
-    location = /changelog {
-        try_files /changelog.html =404;
-    }
-
-    location = /site-lang.js {
-        expires 5m;
-        try_files /site-lang.js =404;
-    }
-
-    location /assets/ {
-        expires 5m;
-        try_files $uri =404;
-    }
-
-    location /profile/ {
-        try_files $uri $uri/ =404;
-    }
-
-    location / {
-        return 404;
+        # Stream large media downloads instead of spooling them to disk.
+        proxy_max_temp_file_size 0;
     }
 }
