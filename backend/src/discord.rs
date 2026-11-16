@@ -22,8 +22,8 @@ pub const PUBLIC_SERVERS: [ServerConfig; 2] = [
     ServerConfig {
         key: "blade",
         name: "Bladephoriafonk",
-        invite_code: "bladephoriafonk",
-        main_url: "https://discord.gg/bladephoriafonk",
+        invite_code: "xDEF5KjC67",
+        main_url: "https://discord.gg/xDEF5KjC67",
         alt_url: "https://discord.gg/6bcWUDa9pE",
         fallback_invite_code: Some("6bcWUDa9pE"),
     },
