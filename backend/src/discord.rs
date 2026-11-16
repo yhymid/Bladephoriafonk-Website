@@ -15,17 +15,24 @@ pub struct ServerConfig {
     pub invite_code: &'static str,
     pub main_url: &'static str,
     pub alt_url: &'static str,
-    pub fallback_invite_code: Option<&'static str>,
+    /// Tried in order when the main invite no longer exists.
+    pub backup_invite_codes: &'static [&'static str],
 }
 
 pub const PUBLIC_SERVERS: [ServerConfig; 2] = [
     ServerConfig {
         key: "blade",
         name: "Bladephoriafonk",
-        invite_code: "xDEF5KjC67",
-        main_url: "https://discord.gg/xDEF5KjC67",
-        alt_url: "https://discord.gg/6bcWUDa9pE",
-        fallback_invite_code: Some("6bcWUDa9pE"),
+        invite_code: "Nh7XnSMhCp",
+        main_url: "https://discord.gg/Nh7XnSMhCp",
+        alt_url: "https://discord.gg/2xTr8pmk36",
+        backup_invite_codes: &[
+            "2xTr8pmk36",
+            "7vxYEgKdgN",
+            "umZ3rMnyXp",
+            "z3NZvDHGzP",
+            "TCx4K5JnSz",
+        ],
     },
     ServerConfig {
         key: "pmc",
@@ -33,7 +40,30 @@ pub const PUBLIC_SERVERS: [ServerConfig; 2] = [
         invite_code: "2upsTHV5Bv",
         main_url: "https://discord.gg/2upsTHV5Bv",
         alt_url: "",
-        fallback_invite_code: None,
+        backup_invite_codes: &[
+            "8MAjxgmnAF",
+            "BAVcR9Tm9W",
+            "D7ZggjWSxc",
+            "KtfDX8Js5H",
+            "VVpgGXHFG9",
+            "VmeuEg3SKZ",
+            "XFg2Yt52Ew",
+            "YZn7XmwY5P",
+            "Z2ZVECnrgu",
+            "fzcAQgJBtv",
+            "pecFGxSjsb",
+            "tfT8a8W8nM",
+            "855QbtyBHz",
+            "8xRHrrTpWm",
+            "FqA3kQYWuS",
+            "GHScwuPTQq",
+            "HuPtndJmXF",
+            "RCNgPAQr8U",
+            "RcVSwaZ3GY",
+            "UDNWqanx5G",
+            "VUWjJWgcmx",
+            "cVWGmCpqZ4",
+        ],
     },
 ];
 
@@ -261,20 +291,25 @@ impl Discord {
         }
     }
 
-    /// Public invite data of a server, trying the fallback invite if needed.
+    /// Public invite data of a server. A dead invite (404) moves on to the
+    /// next backup code; any other failure (network, rate limit) stops, so an
+    /// outage never fans out into one request per backup code.
     pub async fn invite_snapshot(&self, server: &ServerConfig) -> Result<Map<String, Value>, Fail> {
         let mut last_error = Fail("invite_fetch_failed:unknown".to_owned());
-        for invite_code in [Some(server.invite_code), server.fallback_invite_code]
-            .into_iter()
-            .flatten()
-        {
+        for invite_code in std::iter::once(&server.invite_code).chain(server.backup_invite_codes) {
             match self.request_invite_snapshot(invite_code).await {
                 Ok(snapshot) => {
                     let mut payload = server_identity(server);
                     payload.extend(snapshot);
                     return Ok(payload);
                 }
-                Err(error) => last_error = error,
+                Err(error) => {
+                    let invite_is_dead = error.0.starts_with("invite_fetch_failed:404:");
+                    last_error = error;
+                    if !invite_is_dead {
+                        break;
+                    }
+                }
             }
         }
         Err(last_error)
