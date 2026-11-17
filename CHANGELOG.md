@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Diagnostics 24/7 (off by default, `BLADEPHORIA_DIAGNOSTICS=1`): every request, Discord call,
+  data file operation and background task is recorded to `diagnostics/events-<day>.jsonl`, and
+  a Polish report with p50/p90/p99 per route, a time breakdown, the slowest requests, anomalies
+  and hints is written to `diagnostics/summary-<day>.md` every 15 minutes. No secrets are
+  recorded. Old files are removed after 14 days.
+- An end-to-end test that runs the real server against a fake Discord API.
+
+### Changed
+- `deploy/deploy.sh` builds in `~/src/Bladephoriafonk-Website`, keeps only the files the server
+  needs in the site directory, backs up the configuration and the previous binary to
+  `~/backups/` before every swap and uses the `operator_vps` SSH key.
+- The server binary lives in the site directory (`bladephoria-web`).
+- `README.md` moved from `oauth/` to the root of the repository.
+
+### Removed
+- `assets/favicon.svg` from the repository (it stays on the server with the other uploads).
+
 ## 2.0 - Rust Update (2026-11-16)
 
 ### Changed

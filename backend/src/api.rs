@@ -16,6 +16,7 @@ use percent_encoding::percent_decode_str;
 use serde_json::{Map, Value, json};
 
 use crate::config::Config;
+use crate::diagnostics;
 use crate::discord::{self, Discord, PUBLIC_SERVERS, ServerConfig};
 use crate::error::Fail;
 use crate::store;
@@ -85,6 +86,15 @@ impl App {
             profile_lock: tokio::sync::Mutex::default(),
             changelog_lock: tokio::sync::Mutex::default(),
         })
+    }
+
+    /// Sizes of the in-memory state, for the diagnostics resource samples.
+    pub fn counts(&self) -> diagnostics::AppCounts {
+        diagnostics::AppCounts {
+            sessions: lock(&self.sessions).len(),
+            login_states: lock(&self.states).len(),
+            invite_cache: lock(&self.invite_cache).len(),
+        }
     }
 
     /// Drops expired login states and sessions idle for over a week.
@@ -161,7 +171,7 @@ impl App {
             .collect();
         let mut entries = Map::new();
         for (session_id, session) in sessions {
-            let data = session.data.lock().await;
+            let data = diagnostics::timed_lock("session", &session.data).await;
             entries.insert(
                 session_id,
                 json!({
@@ -182,6 +192,7 @@ impl App {
         if let Err(error) = store::write_private_json(&self.cfg.session_db_file, &payload).await {
             self.sessions_dirty.store(true, Ordering::Relaxed);
             eprintln!("[sessions] cannot save sessions: {error}");
+            diagnostics::anomaly("session_save_failed", error.to_string());
         }
     }
 
@@ -257,6 +268,7 @@ impl IntoResponse for ApiError {
             ),
             Self::Internal(error) => {
                 eprintln!("[oauth] request failed: {error}");
+                diagnostics::anomaly("internal_error", error.to_string());
                 json_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     &json!({ "error": "internal_error" }),
@@ -423,7 +435,7 @@ async fn update_session_data(
         .await;
 
     let profile = {
-        let _guard = app.profile_lock.lock().await;
+        let _guard = diagnostics::timed_lock("profiles", &app.profile_lock).await;
         let created = store::upsert_profile(cfg, &user).await?;
         let user_id = js_str(user.get("id"));
         let updated = store::update_profile_entry(cfg, &user_id, |entry| {
@@ -471,7 +483,12 @@ async fn authenticated(
         )));
     };
 
-    let refreshed = update_session_data(app, &mut *session.data.lock().await, false).await;
+    let refreshed = update_session_data(
+        app,
+        &mut *diagnostics::timed_lock("session", &session.data).await,
+        false,
+    )
+    .await;
     if refreshed.is_err() {
         return Err(Box::new(app.expire_session(
             &session_id,
@@ -558,6 +575,7 @@ pub async fn discord_callback(
     // message instead of a raw error response.
     let login_failed = |error: Fail| {
         eprintln!("[oauth] login failed: {error}");
+        diagnostics::anomaly("login_failed", error.to_string());
         redirect(&format!("{return_to}?oauth_error=login_failed"))
     };
 
@@ -620,7 +638,7 @@ pub async fn session(
         return json_response(StatusCode::OK, &json!({ "authenticated": false }));
     };
 
-    let mut data = session.data.lock().await;
+    let mut data = diagnostics::timed_lock("session", &session.data).await;
     if update_session_data(&app, &mut data, refresh).await.is_err() {
         drop(data);
         return app.expire_session(
@@ -748,7 +766,12 @@ pub async fn server_data(State(app): State<SharedApp>, RawQuery(query): RawQuery
     let refresh = query_param(query.as_deref(), "refresh").as_deref() == Some("1");
     let tasks: Vec<_> = PUBLIC_SERVERS
         .iter()
-        .map(|server| tokio::spawn(read_invite_profile(app.clone(), server, refresh)))
+        .map(|server| {
+            tokio::spawn(diagnostics::with_spans(
+                diagnostics::current_spans(),
+                read_invite_profile(app.clone(), server, refresh),
+            ))
+        })
         .collect();
 
     let mut servers = Vec::with_capacity(tasks.len());
@@ -783,7 +806,7 @@ pub async fn changelog_create(
         Err(response) => return Ok(*response),
     };
     let author = {
-        let data = session.data.lock().await;
+        let data = diagnostics::timed_lock("session", &session.data).await;
         if !app.is_admin(data.user.as_ref()) {
             return Ok(json_response(
                 StatusCode::FORBIDDEN,
@@ -823,7 +846,7 @@ pub async fn changelog_create(
     .unwrap_or(Value::Null);
 
     {
-        let _guard = app.changelog_lock.lock().await;
+        let _guard = diagnostics::timed_lock("changelog", &app.changelog_lock).await;
         let mut posts = store::read_changelog_posts(&app.cfg).await?;
         posts.insert(0, post.clone());
         store::write_changelog_posts(&app.cfg, posts).await?;
@@ -853,7 +876,7 @@ pub async fn profile_mode(
         ));
     };
 
-    let mut data = session.data.lock().await;
+    let mut data = diagnostics::timed_lock("session", &session.data).await;
     let user = data.user.clone().unwrap_or(Value::Null);
     let user_id = js_str(user.get("id"));
     if user_id.is_empty() {
@@ -864,7 +887,7 @@ pub async fn profile_mode(
     }
 
     let updated = {
-        let _guard = app.profile_lock.lock().await;
+        let _guard = diagnostics::timed_lock("profiles", &app.profile_lock).await;
         let snapshot = public_mode.then(|| {
             discord::public_profile_snapshot(&user, &data.connections, data.guild_profile.as_ref())
         });
@@ -913,7 +936,7 @@ pub async fn profile_delete(State(app): State<SharedApp>, headers: HeaderMap) ->
     }
 
     let deleted = {
-        let _guard = app.profile_lock.lock().await;
+        let _guard = diagnostics::timed_lock("profiles", &app.profile_lock).await;
         store::delete_profile(&app.cfg, &user_id).await?
     };
     let Some(slug) = deleted else {

@@ -10,19 +10,35 @@ Nginx tylko terminuje TLS i przekazuje caly ruch do tego programu.
 deploy/deploy.sh
 ```
 
-Skrypt wysyla zacommitowany stan repo na VPS, buduje binarke, restartuje
-usluge (tylko gdy binarka sie zmienila) i sprawdza, czy serwer odpowiada.
-Gdy nowa wersja nie odpowiada, przywraca poprzednia binarke.
+Skrypt:
 
-Nigdy nie rusza: `oauth/.env`, `oauth/data/`, `media/` ani plikow, ktorych
-nie bylo w repo (np. rzeczy wgrane recznie do `assets/`).
+1. wysyla zacommitowany stan repo do `~/src/Bladephoriafonk-Website` na VPS
+   i buduje tam binarke (`cargo build --release --locked`; VPS ma inny glibc
+   niz komputer lokalny, wiec buduje sie tylko tam),
+2. robi kopie konfiguracji (`oauth/.env`, unit systemd, strona nginx) do
+   `~/backups/website-config-<czas>.tar.gz` - trzymana jest tylko najnowsza,
+3. kopiuje do katalogu strony tylko pliki potrzebne do dzialania (strony,
+   `site-lang.js`, `profile/index.html`); pliki usuniete z repo znikaja
+   z serwera (lista w `.deployed-files`),
+4. gdy binarka sie zmienila: zapisuje poprzednia jako
+   `~/backups/bladephoria-web.bin.<commit>` (tylko jedna), podmienia
+   `bladephoria-web` w katalogu strony, restartuje usluge i sprawdza
+   `/health`. Gdy nowa wersja nie odpowiada, przywraca poprzednia binarke.
+
+Nigdy nie rusza: `oauth/.env`, `oauth/data/`, `media/`, `diagnostics/` ani
+`assets/` (tam sa recznie wgrane pliki modpacka).
+
+Katalog strony na VPS zawiera tylko to, czego potrzebuje usluga:
+`bladephoria-web`, `*.html`, `site-lang.js`, `profile/`, `assets/`, `media/`,
+`oauth/.env`, `oauth/data/`, `diagnostics/`, `.deployed-commit`,
+`.deployed-files`.
 
 Ustawienia (zmienne srodowiskowe): `BPF_DEPLOY_SSH`, `BPF_DEPLOY_KEY`,
 `BPF_DEPLOY_DIR` - opis na gorze skryptu.
 
 ## Pierwsza instalacja
 
-1. Rust na VPS (`rustup`), kod strony w `/home/ubuntu/Main Files/Website`.
+1. Rust na VPS (`rustup`), katalog strony `/home/ubuntu/Main Files/Website`.
 2. `oauth/.env` wedlug [oauth/.env.example](../oauth/.env.example).
 3. Usluga systemd: [bladephoria-oauth.service.example](bladephoria-oauth.service.example)
 
@@ -33,6 +49,7 @@ Ustawienia (zmienne srodowiskowe): `BPF_DEPLOY_SSH`, `BPF_DEPLOY_KEY`,
    ```
 
 4. Nginx: [nginx-site.conf.example](nginx-site.conf.example).
+5. `deploy/deploy.sh` z komputera lokalnego.
 
 ## Dane
 
@@ -50,7 +67,7 @@ Wszystko w `oauth/data/` (albo tam, gdzie wskazuje `.env`):
 - `/profile/` i `/profile/<slug>/` (tylko dla istniejacych profili)
 - `/auth/*`, `/health`
 
-Wszystko inne (`oauth/`, `backend/`, `deploy/`, pliki z kropka na poczatku,
+Wszystko inne (`oauth/`, `diagnostics/`, binarka, pliki z kropka na poczatku,
 np. `.env` czy `.delete-token`) zwraca strone 404.
 
 ## Kontrola po wdrozeniu
@@ -59,4 +76,6 @@ np. `.env` czy `.delete-token`) zwraca strone 404.
 curl -I https://bladephoriafonk.xyz/
 curl -s https://bladephoriafonk.xyz/auth/session
 curl -I https://bladephoriafonk.xyz/oauth/.env   # 404
+systemctl show bladephoria-oauth -p NRestarts     # 0
+ls "/home/ubuntu/Main Files/Website/diagnostics"  # gdy diagnostyka wlaczona
 ```

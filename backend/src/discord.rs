@@ -1,11 +1,12 @@
 //! Discord API client and the mapping from Discord objects to the public
 //! JSON shapes the frontend consumes.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
 
 use crate::config::Config;
+use crate::diagnostics::{self, DiscordCall};
 use crate::error::Fail;
 use crate::util::{js_str, now_iso, truthy};
 
@@ -77,6 +78,22 @@ pub struct Discord {
     origin: String,
 }
 
+fn error_class(error: &reqwest::Error) -> &'static str {
+    if error.is_timeout() {
+        "timeout"
+    } else if error.is_connect() {
+        "connect"
+    } else if error.is_body() {
+        "body"
+    } else if error.is_decode() {
+        "decode"
+    } else if error.is_request() {
+        "request"
+    } else {
+        "other"
+    }
+}
+
 fn first_chars(text: &str, count: usize) -> String {
     text.chars().take(count).collect()
 }
@@ -108,15 +125,60 @@ impl Discord {
         )
     }
 
+    /// Sends a request and reads the whole body, recording timing, size and
+    /// rate-limit headers for diagnostics.
+    async fn fetch(
+        &self,
+        endpoint: &'static str,
+        request: reqwest::RequestBuilder,
+    ) -> Result<(reqwest::StatusCode, Vec<u8>), Fail> {
+        let started = Instant::now();
+        let response = match request.send().await {
+            Ok(response) => response,
+            Err(error) => {
+                let elapsed = started.elapsed();
+                diagnostics::discord(DiscordCall {
+                    endpoint,
+                    status: 0,
+                    ttfb: elapsed,
+                    total: elapsed,
+                    bytes: 0,
+                    error: Some(error_class(&error)),
+                    headers: None,
+                });
+                return Err(error.into());
+            }
+        };
+        let ttfb = started.elapsed();
+        let status = response.status();
+        let headers = diagnostics::enabled().then(|| response.headers().clone());
+        let body = response.bytes().await;
+        diagnostics::discord(DiscordCall {
+            endpoint,
+            status: status.as_u16(),
+            ttfb,
+            total: started.elapsed(),
+            bytes: body.as_ref().map_or(0, |body| body.len()),
+            error: body.as_ref().err().map(error_class),
+            headers: headers.as_ref(),
+        });
+        diagnostics::remote_clock(
+            "discord",
+            headers
+                .as_ref()
+                .and_then(|headers| headers.get(reqwest::header::DATE))
+                .and_then(|value| value.to_str().ok()),
+        );
+        Ok((status, body?.to_vec()))
+    }
+
     async fn token_request(&self, label: &str, form: &[(&str, &str)]) -> Result<Value, Fail> {
-        let response = self
+        let request = self
             .http
             .post(format!("{}/api/oauth2/token", self.origin))
-            .form(form)
-            .send()
-            .await?;
-        let status = response.status();
-        let data: Value = response.json().await?;
+            .form(form);
+        let (status, body) = self.fetch("oauth2/token", request).await?;
+        let data: Value = serde_json::from_slice(&body)?;
         if !status.is_success() {
             let reason = Some(js_str(data.get("error")))
                 .filter(|reason| !reason.is_empty())
@@ -153,33 +215,40 @@ impl Discord {
         .await
     }
 
-    async fn resource(&self, url: &str, access_token: &str) -> Result<Value, Fail> {
-        let response = self
+    async fn resource(
+        &self,
+        endpoint: &'static str,
+        url: &str,
+        access_token: &str,
+    ) -> Result<Value, Fail> {
+        let request = self
             .http
             .get(url)
             .bearer_auth(access_token)
-            .header("user-agent", "BladephoriafonkOAuth/2.0")
-            .send()
-            .await?;
-        let status = response.status();
+            .header("user-agent", "BladephoriafonkOAuth/2.0");
+        let (status, body) = self.fetch(endpoint, request).await?;
         if !status.is_success() {
-            let text = response.text().await.unwrap_or_default();
             return Err(Fail(format!(
                 "discord_fetch_failed:{}:{}",
                 status.as_u16(),
-                first_chars(&text, 200)
+                first_chars(&String::from_utf8_lossy(&body), 200)
             )));
         }
-        Ok(response.json().await?)
+        Ok(serde_json::from_slice(&body)?)
     }
 
     pub async fn user(&self, access_token: &str) -> Result<Value, Fail> {
-        self.resource(&self.user_url(), access_token).await
+        self.resource("users/@me", &self.user_url(), access_token)
+            .await
     }
 
     pub async fn connections(&self, access_token: &str) -> Result<Value, Fail> {
-        self.resource(&format!("{}/connections", self.user_url()), access_token)
-            .await
+        self.resource(
+            "users/@me/connections",
+            &format!("{}/connections", self.user_url()),
+            access_token,
+        )
+        .await
     }
 
     /// Server-profile details (banner, bio, nick) of the user in their
@@ -196,7 +265,11 @@ impl Discord {
         }
 
         let guilds = self
-            .resource(&format!("{}/guilds", self.user_url()), access_token)
+            .resource(
+                "users/@me/guilds",
+                &format!("{}/guilds", self.user_url()),
+                access_token,
+            )
             .await
             .ok()?;
         let guild = pick_preferred_guild(cfg, user, guilds.as_array()?)?;
@@ -207,6 +280,7 @@ impl Discord {
 
         let member = self
             .resource(
+                "users/@me/guilds/member",
                 &format!("{}/guilds/{guild_id}/member", self.user_url()),
                 access_token,
             )
@@ -225,23 +299,20 @@ impl Discord {
 
     async fn request_invite_snapshot(&self, invite_code: &str) -> Result<Map<String, Value>, Fail> {
         let endpoint = self.invite_url(invite_code);
-        let response = self
+        let request = self
             .http
             .get(&endpoint)
-            .header("user-agent", "BladephoriafonkWebsite/2.0")
-            .send()
-            .await?;
-        let status = response.status();
+            .header("user-agent", "BladephoriafonkWebsite/2.0");
+        let (status, body) = self.fetch("invites", request).await?;
         if !status.is_success() {
-            let text = response.text().await.unwrap_or_default();
             return Err(Fail(format!(
                 "invite_fetch_failed:{}:{}",
                 status.as_u16(),
-                first_chars(&text, 200)
+                first_chars(&String::from_utf8_lossy(&body), 200)
             )));
         }
 
-        let data: Value = response.json().await?;
+        let data: Value = serde_json::from_slice(&body)?;
         let guild = data.get("guild").filter(|value| truthy(value));
         let profile = data.get("profile").filter(|value| truthy(value));
         let from_guild = |key: &str| guild.and_then(|guild| guild.get(key));
@@ -304,6 +375,18 @@ impl Discord {
         for (index, invite_code) in server.invite_codes.iter().enumerate() {
             match self.request_invite_snapshot(invite_code).await {
                 Ok(snapshot) => {
+                    if index > 0 {
+                        diagnostics::anomaly_throttled(
+                            "invite_expired",
+                            server.key,
+                            format!(
+                                "{}: {} no longer works, using {invite_code}",
+                                server.name,
+                                server.invite_codes[..index].join(", ")
+                            ),
+                            Duration::from_secs(3600),
+                        );
+                    }
                     let mut payload = server_identity(server, index);
                     payload.extend(snapshot);
                     return Ok(payload);

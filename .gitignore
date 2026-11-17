@@ -26,3 +26,9 @@ target/
 # Runtime data written by the server
 oauth/data/changelog.json
 oauth/data/sessions.json
+
+# Diagnostics recorder output
+diagnostics/
+
+# Uploads on the server (modpack icons etc.), not part of the repo
+assets/

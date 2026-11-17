@@ -1,6 +1,7 @@
-# Discord OAuth2 + Website backend
+# Bladephoriafonk Website
 
-Backend jest napisany w Ruscie i lezy w [`backend/`](../backend). Jeden
+Strona https://bladephoriafonk.xyz. Backend jest napisany w Ruscie i lezy w
+[`backend/`](backend). Jeden
 program (`bladephoria-web`) obsluguje:
 
 - strony i assety (`/`, `/server`, `/administracja`, `/changelog`, `/assets/`, `/profile/`, `/media/`),
@@ -10,7 +11,7 @@ program (`bladephoria-web`) obsluguje:
 - publiczne dane serwerow Discord pobierane po stronie backendu,
 - usuwanie opublikowanych mediow po tokenie.
 
-Ten katalog (`oauth/`) trzyma juz tylko konfiguracje i dane: `.env` i `data/`.
+Katalog `oauth/` trzyma tylko konfiguracje i dane: `.env` i `data/`.
 
 ## Co jest wazne
 
@@ -30,7 +31,7 @@ Domyslny redirect dla domeny:
 
 - `https://bladephoriafonk.xyz/auth/discord/callback`
 
-Pelna lista zmiennych: [.env.example](.env.example). Zmienne ustawione
+Pelna lista zmiennych: [oauth/.env.example](oauth/.env.example). Zmienne ustawione
 w srodowisku maja pierwszenstwo przed plikiem `--env-file`.
 
 ## Lokalne uruchomienie
@@ -52,16 +53,47 @@ Testy i kontrola kodu:
 
 ```bash
 cd backend
-cargo test
+cargo test            # testy jednostkowe + e2e (prawdziwa binarka i atrapa Discorda)
 cargo clippy --all-targets -- -D warnings
 ```
 
 ## Wdrozenie na VPS
 
-Opis: [deploy/DEPLOY.md](../deploy/DEPLOY.md). Przyklady:
+Opis: [deploy/DEPLOY.md](deploy/DEPLOY.md). Przyklady:
 
-- [deploy/nginx-site.conf.example](../deploy/nginx-site.conf.example)
-- [deploy/bladephoria-oauth.service.example](../deploy/bladephoria-oauth.service.example)
+- [deploy/nginx-site.conf.example](deploy/nginx-site.conf.example)
+- [deploy/bladephoria-oauth.service.example](deploy/bladephoria-oauth.service.example)
+
+## Diagnostyka
+
+Wlaczana w `.env`: `BLADEPHORIA_DIAGNOSTICS=1`. Serwer zapisuje wtedy do
+`diagnostics/` (obok `index.html`; katalog nie jest publiczny):
+
+- `events-YYYY-MM-DD.jsonl` - kazde zdarzenie w osobnej linii JSON, czas w ms:
+  `http` (trasa, status, TTFB, czas calosci i wysylki, rozmiar, kompresja,
+  ile czasu zajal Discord / pliki / blokady), `discord` (endpoint, status,
+  czas, naglowki rate limit), `io` (odczyt/zapis plikow danych), `lock`,
+  `tick` (spoznienie zadan okresowych), `resources` (co minute: RAM, CPU,
+  watki, deskryptory, opoznienie petli zdarzen, liczba sesji), `anomaly`
+  (np. wygasle zaproszenie, 429, zly JSON, przesuniecie zegara, nieudane
+  logowanie) i `lifecycle` (start, stop, audyt danych);
+- `summary-YYYY-MM-DD.md` - raport po polsku odswiezany co 15 minut i przy
+  zamknieciu: p50/p90/p99 dla kazdej trasy, gdzie idzie czas, najwolniejsze
+  zadania, Discord API, pliki, zasoby, anomalie i automatyczne wskazowki.
+
+Doba liczona w UTC. Zapis idzie przez osobny watek i ograniczona kolejke, wiec
+nigdy nie spowalnia odpowiedzi (przy przepelnieniu zdarzenie jest liczone jako
+pominiete). Pliki nie zawieraja sekretow: zadnych query stringow, ciasteczek,
+tokenow, tresci zadan ani adresow IP - tylko etykiety tras (`/profile/:slug`,
+`/media/*`, `(404)`), czasy, rozmiary i liczniki.
+
+| Zmienna | Domyslnie | Znaczenie |
+|---|---|---|
+| `BLADEPHORIA_DIAGNOSTICS` | wylaczone | `1` wlacza |
+| `BLADEPHORIA_DIAGNOSTICS_DIR` | `SITE_ROOT/diagnostics` | katalog plikow |
+| `BLADEPHORIA_DIAGNOSTICS_RETENTION_DAYS` | `14` | po ilu dniach pliki sa usuwane |
+| `BLADEPHORIA_DIAGNOSTICS_MAX_MB` | `50` | limit pliku zdarzen na dzien |
+| `BLADEPHORIA_DIAGNOSTICS_SUMMARY_MINUTES` | `15` | co ile minut raport |
 
 ## Endpointy
 

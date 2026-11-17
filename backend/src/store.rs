@@ -4,15 +4,17 @@
 use std::collections::HashSet;
 use std::io::ErrorKind;
 use std::path::Path;
+use std::time::Instant;
 
 use serde_json::{Map, Value, json};
 use tokio::fs;
 
 use crate::config::Config;
+use crate::diagnostics;
 use crate::error::Fail;
 use crate::util::{
-    infer_media_type, js_str, now_iso, now_ms, random_hex, safe_slug, sanitize_http_url,
-    sanitize_slug,
+    infer_media_type, js_str, now_iso, now_ms, parse_iso_ms, random_hex, safe_slug,
+    sanitize_http_url, sanitize_slug,
 };
 
 pub async fn path_exists(path: &Path) -> bool {
@@ -21,24 +23,46 @@ pub async fn path_exists(path: &Path) -> bool {
 
 /// Reads a JSON file; a missing or blank file yields `None`.
 pub async fn read_json_file(path: &Path) -> Result<Option<Value>, Fail> {
+    let started = Instant::now();
     let text = match fs::read_to_string(path).await {
         Ok(text) => text,
-        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
-        Err(error) => return Err(error.into()),
+        Err(error) => {
+            let missing = error.kind() == ErrorKind::NotFound;
+            diagnostics::io("read", path, started.elapsed(), 0, missing);
+            return if missing { Ok(None) } else { Err(error.into()) };
+        }
     };
-    if text.trim().is_empty() {
-        return Ok(None);
-    }
-    serde_json::from_str(&text).map(Some).map_err(|_| {
-        let name = path.file_name().unwrap_or_default().to_string_lossy();
-        Fail(format!("invalid_json_file:{name}"))
-    })
+    let parsed = if text.trim().is_empty() {
+        Ok(None)
+    } else {
+        serde_json::from_str(&text).map(Some).map_err(|_| {
+            let name = path.file_name().unwrap_or_default().to_string_lossy();
+            diagnostics::anomaly("invalid_json_file", name.to_string());
+            Fail(format!("invalid_json_file:{name}"))
+        })
+    };
+    diagnostics::io("read", path, started.elapsed(), text.len(), parsed.is_ok());
+    parsed
 }
 
 /// Writes pretty JSON through a temp file + rename, keeping a `.bak` copy of
 /// the previous version.
 async fn write_json_atomic(path: &Path, payload: &Value) -> Result<(), Fail> {
+    let started = Instant::now();
+    let written = write_json_atomic_inner(path, payload).await;
+    diagnostics::io(
+        "write",
+        path,
+        started.elapsed(),
+        *written.as_ref().unwrap_or(&0),
+        written.is_ok(),
+    );
+    written.map(|_| ())
+}
+
+async fn write_json_atomic_inner(path: &Path, payload: &Value) -> Result<usize, Fail> {
     let body = serde_json::to_string_pretty(payload)?;
+    let size = body.len();
     let with_suffix = |suffix: String| {
         let mut name = path.as_os_str().to_owned();
         name.push(suffix);
@@ -55,12 +79,25 @@ async fn write_json_atomic(path: &Path, payload: &Value) -> Result<(), Fail> {
     let temp = with_suffix(format!(".{}.{}.tmp", std::process::id(), now_ms()));
     fs::write(&temp, body).await?;
     fs::rename(&temp, path).await?;
-    Ok(())
+    Ok(size)
 }
 
 /// Writes compact JSON readable only by the service user (mode 0600), for
 /// files holding secrets such as session tokens.
 pub async fn write_private_json(path: &Path, payload: &Value) -> Result<(), Fail> {
+    let started = Instant::now();
+    let written = write_private_json_inner(path, payload).await;
+    diagnostics::io(
+        "write",
+        path,
+        started.elapsed(),
+        *written.as_ref().unwrap_or(&0),
+        written.is_ok(),
+    );
+    written.map(|_| ())
+}
+
+async fn write_private_json_inner(path: &Path, payload: &Value) -> Result<usize, Fail> {
     use tokio::io::AsyncWriteExt;
 
     if let Some(directory) = path.parent() {
@@ -76,11 +113,12 @@ pub async fn write_private_json(path: &Path, payload: &Value) -> Result<(), Fail
         .mode(0o600)
         .open(&temp)
         .await?;
-    file.write_all(payload.to_string().as_bytes()).await?;
+    let body = payload.to_string();
+    file.write_all(body.as_bytes()).await?;
     file.flush().await?;
     drop(file);
     fs::rename(&temp, path).await?;
-    Ok(())
+    Ok(body.len())
 }
 
 // ---------------------------------------------------------------- profiles
@@ -313,6 +351,76 @@ pub async fn write_changelog_posts(cfg: &Config, posts: Vec<Value>) -> Result<()
         &json!({ "version": 1, "posts": posts }),
     )
     .await
+}
+
+/// Consistency checks of the data files for the diagnostics report.
+/// Returns the number of profiles and posts and every issue found as
+/// (anomaly type, detail).
+pub async fn audit_data(cfg: &Config) -> (usize, usize, Vec<(&'static str, String)>) {
+    let mut issues = Vec::new();
+    let mut profiles = 0;
+    let mut posts = 0;
+
+    match read_profile_db(cfg).await {
+        Ok(users) => {
+            profiles = users.len();
+            let mut seen = HashSet::new();
+            for (user_id, entry) in &users {
+                let Some(slug) = entry.get("slug").and_then(Value::as_str) else {
+                    issues.push(("profile_without_slug", format!("user {user_id}")));
+                    continue;
+                };
+                if sanitize_slug(slug) != slug {
+                    issues.push(("invalid_slug", slug.to_owned()));
+                }
+                if !seen.insert(slug.to_owned()) {
+                    issues.push(("duplicate_slug", slug.to_owned()));
+                }
+            }
+        }
+        Err(error) => issues.push(("unreadable_data_file", error.to_string())),
+    }
+
+    match read_json_file(&cfg.changelog_db_file).await {
+        Ok(Some(data)) => {
+            let list = data
+                .get("posts")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            posts = list.len();
+            let horizon = now_ms() + 5 * 60 * 1000;
+            let mut ids = HashSet::new();
+            for post in &list {
+                let id = js_str(post.get("id"));
+                if !id.is_empty() && !ids.insert(id.clone()) {
+                    issues.push(("duplicate_post_id", id.clone()));
+                }
+                match post
+                    .get("created_at")
+                    .and_then(Value::as_str)
+                    .and_then(parse_iso_ms)
+                {
+                    None => issues.push(("bad_post_date", id.clone())),
+                    Some(created) if created > horizon => {
+                        issues.push(("post_in_future", id.clone()));
+                    }
+                    Some(_) => {}
+                }
+                if post
+                    .get("content")
+                    .and_then(Value::as_str)
+                    .is_none_or(|content| content.trim().is_empty())
+                {
+                    issues.push(("empty_post", id));
+                }
+            }
+        }
+        Ok(None) => {}
+        Err(error) => issues.push(("unreadable_data_file", error.to_string())),
+    }
+
+    (profiles, posts, issues)
 }
 
 /// Creates the data files on first start so they are easy to find and edit.

@@ -6,22 +6,24 @@
 
 mod api;
 mod config;
+mod diagnostics;
 mod discord;
 mod error;
 mod static_files;
 mod store;
 mod util;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use axum::Router;
 use axum::http::header::CONTENT_TYPE;
 use axum::http::{Extensions, HeaderMap, StatusCode, Version};
 use axum::routing::{any, get, post};
 use axum::serve::ListenerExt;
+use serde_json::json;
 use tower_http::compression::CompressionLayer;
 
 use crate::api::App;
@@ -64,6 +66,8 @@ fn router(app: Arc<App>) -> Router {
         .method_not_allowed_fallback(api::not_found)
         .fallback(static_files::serve)
         .layer(CompressionLayer::new().compress_when(is_compressible))
+        // Outermost, so it sees the compressed bytes that go on the wire.
+        .layer(axum::middleware::from_fn(diagnostics::track_requests))
         .with_state(app)
 }
 
@@ -100,9 +104,55 @@ fn env_file_argument() -> Result<Option<PathBuf>, String> {
     Ok(env_file)
 }
 
+/// First 12 characters of the commit recorded by `deploy/deploy.sh`.
+fn deployed_commit(site_root: &Path) -> Option<String> {
+    let commit = std::fs::read_to_string(site_root.join(".deployed-commit")).ok()?;
+    let commit = commit.trim();
+    (!commit.is_empty()).then(|| commit.chars().take(12).collect())
+}
+
+/// Reports inconsistencies in the data files as diagnostics anomalies.
+async fn audit_data(cfg: &Config) {
+    if !diagnostics::enabled() {
+        return;
+    }
+    let (profiles, posts, issues) = store::audit_data(cfg).await;
+    for (kind, detail) in &issues {
+        diagnostics::anomaly(kind, detail.clone());
+    }
+    diagnostics::lifecycle(
+        "data_audit",
+        json!({ "profiles": profiles, "posts": posts, "issues": issues.len() }),
+    );
+}
+
 async fn run() -> Result<(), String> {
     let env_file = env_file_argument()?;
     let cfg = Config::load(env_file.as_deref())?;
+    let started = Instant::now();
+
+    // Diagnostics must never keep the site down: a failure only disables them.
+    let diagnostics_on = diagnostics::start(&cfg.diagnostics).unwrap_or_else(|error| {
+        eprintln!(
+            "[diagnostics] disabled, cannot write to {}: {error}",
+            cfg.diagnostics.dir.display()
+        );
+        false
+    });
+    diagnostics::lifecycle(
+        "start",
+        json!({
+            "version": env!("CARGO_PKG_VERSION"),
+            "commit": deployed_commit(&cfg.site_root),
+            "pid": std::process::id(),
+            "port": cfg.port,
+            "session_data_ttl_ms": cfg.session_data_ttl_ms,
+            "invite_cache_ttl_ms": cfg.invite_cache_ttl_ms,
+            "retention_days": cfg.diagnostics.retention_days,
+            "max_mb_per_day": cfg.diagnostics.max_mb_per_day,
+            "summary_minutes": cfg.diagnostics.summary_every.as_secs() / 60,
+        }),
+    );
 
     store::ensure_default_files(&cfg)
         .await
@@ -120,6 +170,9 @@ async fn run() -> Result<(), String> {
     println!("Bladephoriafonk web server listening on http://{address}");
     println!("Site root: {}", cfg.site_root.display());
     println!("Profile template: {}", cfg.profile_template_file.display());
+    if diagnostics_on {
+        println!("Diagnostics: {}", cfg.diagnostics.dir.display());
+    }
 
     let app =
         Arc::new(App::new(cfg).map_err(|error| format!("cannot start HTTP client: {error}"))?);
@@ -129,17 +182,30 @@ async fn run() -> Result<(), String> {
         Err(error) => eprintln!("[sessions] cannot restore sessions: {error}"),
     }
 
+    audit_data(&app.cfg).await;
+    diagnostics::spawn_samplers({
+        let app = app.clone();
+        move || app.counts()
+    });
+
     let janitor = app.clone();
     tokio::spawn(async move {
         let mut tick = tokio::time::interval(Duration::from_secs(15));
         let mut ticks = 0u32;
         loop {
-            tick.tick().await;
+            let scheduled = tick.tick().await;
+            let late = tokio::time::Instant::now().saturating_duration_since(scheduled);
+            let work = Instant::now();
             ticks = ticks.wrapping_add(1);
             if ticks.is_multiple_of(4) {
                 janitor.cleanup();
             }
             janitor.save_sessions(false).await;
+            // Hourly consistency check of the data files.
+            if ticks.is_multiple_of(240) {
+                audit_data(&janitor.cfg).await;
+            }
+            diagnostics::tick("janitor", late, work.elapsed());
         }
     });
 
@@ -148,6 +214,11 @@ async fn run() -> Result<(), String> {
         .await
         .map_err(|error| format!("server error: {error}"));
     app.save_sessions(true).await;
+    diagnostics::lifecycle(
+        "stop",
+        json!({ "uptime_s": started.elapsed().as_secs(), "error": served.as_ref().err() }),
+    );
+    diagnostics::shutdown();
     served
 }
 
@@ -160,6 +231,8 @@ async fn main() -> ExitCode {
     match run().await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
+            diagnostics::anomaly("startup_failed", error.clone());
+            diagnostics::shutdown();
             eprintln!("bladephoria-web: {error}");
             ExitCode::FAILURE
         }

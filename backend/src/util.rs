@@ -124,6 +124,39 @@ pub fn parse_iso_ms(input: &str) -> Option<i64> {
     }
 }
 
+/// Parses an HTTP `Date` header (`Sun, 06 Nov 1994 08:49:37 GMT`) to epoch
+/// milliseconds.
+pub fn parse_http_date(input: &str) -> Option<i64> {
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let mut parts = input.split_whitespace();
+    let (_weekday, day, month, year, time, zone) = (
+        parts.next()?,
+        parts.next()?,
+        parts.next()?,
+        parts.next()?,
+        parts.next()?,
+        parts.next()?,
+    );
+    if zone != "GMT" || parts.next().is_some() {
+        return None;
+    }
+    let month = MONTHS.iter().position(|name| *name == month)? as i64 + 1;
+    let day: i64 = day.parse().ok()?;
+    let year: i64 = year.parse().ok()?;
+    let mut clock = time.split(':').map(|part| part.parse::<i64>().ok());
+    let (hour, minute, second) = (clock.next()??, clock.next()??, clock.next()??);
+    if clock.next().is_some() || !(1..=31).contains(&day) || hour > 23 || minute > 59 || second > 60
+    {
+        return None;
+    }
+    Some(
+        days_from_civil(year, month, day) * 86_400_000
+            + ((hour * 60 + minute) * 60 + second) * 1000,
+    )
+}
+
 /// `size` random bytes from the OS CSPRNG, hex encoded.
 pub fn random_hex(size: usize) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
@@ -291,6 +324,22 @@ mod tests {
         assert_eq!(iso_from_ms(1_780_579_567_036), "2026-06-04T13:26:07.036Z");
         assert_eq!(iso_from_ms(951_782_400_000), "2000-02-29T00:00:00.000Z");
         assert_eq!(iso_from_ms(-1), "1969-12-31T23:59:59.999Z");
+    }
+
+    #[test]
+    fn http_dates() {
+        assert_eq!(
+            parse_http_date("Thu, 01 Jan 2026 00:00:00 GMT"),
+            Some(1_767_225_600_000)
+        );
+        assert_eq!(
+            parse_http_date("Thu, 04 Jun 2026 13:26:07 GMT"),
+            Some(1_780_579_567_000)
+        );
+        assert_eq!(parse_http_date("Thu, 01 Jan 2026 00:00:00 UTC"), None);
+        assert_eq!(parse_http_date("Thu, 01 Foo 2026 00:00:00 GMT"), None);
+        assert_eq!(parse_http_date("Thu, 01 Jan 2026 25:00:00 GMT"), None);
+        assert_eq!(parse_http_date(""), None);
     }
 
     #[test]

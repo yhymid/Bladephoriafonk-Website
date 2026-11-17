@@ -4,6 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use crate::diagnostics::DiagConfig;
 use crate::util::normalize_admin_identity;
 
 pub struct Config {
@@ -34,6 +35,8 @@ pub struct Config {
 
     pub admin_user_ids: HashSet<String>,
     pub admin_usernames: HashSet<String>,
+
+    pub diagnostics: DiagConfig,
 }
 
 /// Environment lookup where real environment variables win over the env file
@@ -140,7 +143,25 @@ impl Config {
                 .collect()
         };
 
+        let diagnostics = DiagConfig {
+            enabled: env.get("BLADEPHORIA_DIAGNOSTICS").is_some_and(|value| {
+                matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "1" | "true" | "yes" | "on"
+                )
+            }),
+            dir: env.path("BLADEPHORIA_DIAGNOSTICS_DIR", site_root.join("diagnostics")),
+            retention_days: env.number("BLADEPHORIA_DIAGNOSTICS_RETENTION_DAYS", 14),
+            max_mb_per_day: env.number("BLADEPHORIA_DIAGNOSTICS_MAX_MB", 50),
+            summary_every: std::time::Duration::from_secs(
+                60 * env
+                    .number::<u64>("BLADEPHORIA_DIAGNOSTICS_SUMMARY_MINUTES", 15)
+                    .max(1),
+            ),
+        };
+
         Ok(Self {
+            diagnostics,
             host: env.string("HOST", "127.0.0.1"),
             port: env.number("PORT", 3001),
 
