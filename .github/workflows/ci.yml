@@ -53,6 +53,57 @@ jobs:
       - name: Deploy script syntax
         run: bash -n ../deploy/deploy.sh
 
+  musl:
+    # The static binary that deploy/deploy.sh installs on the VPS: it runs on
+    # any Linux, whatever its glibc.
+    name: Static musl binary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      TARGET: x86_64-unknown-linux-musl
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install toolchain
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q musl-tools
+          rustup toolchain install stable --profile minimal --target "$TARGET"
+          rustup default stable
+      - name: Build static binary
+        env:
+          CC_x86_64_unknown_linux_musl: musl-gcc
+        run: cargo build --release --locked --target "$TARGET"
+      - name: Check binary
+        run: |
+          bin="target/$TARGET/release/bladephoria-web"
+          file "$bin"
+          file "$bin" | grep -Eq 'static(-pie)? linked'
+          "$bin" --version | grep -qx "bladephoria-web $(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml)"
+          data="$RUNNER_TEMP/musl-check"
+          mkdir -p "$data"
+          sed -e "s|/var/lib/bladephoria|$data|" \
+              -e "s|/home/ubuntu/Main Files/Website|$GITHUB_WORKSPACE|" \
+              -e "s|^DISCORD_CLIENT_ID=$|DISCORD_CLIENT_ID=123|" \
+              -e "s|^DISCORD_CLIENT_SECRET=$|DISCORD_CLIENT_SECRET=placeholder|" \
+              ../oauth/.env.example > "$data/.env"
+          "$bin" --check-config --env-file "$data/.env"
+          mkdir -p "$RUNNER_TEMP/out"
+          cp "$bin" "$RUNNER_TEMP/out/bladephoria-web"
+          (cd "$RUNNER_TEMP/out" && sha256sum bladephoria-web > SHA256SUMS && cat SHA256SUMS)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bladephoria-web-musl
+          path: |
+            ${{ runner.temp }}/out/bladephoria-web
+            ${{ runner.temp }}/out/SHA256SUMS
+          retention-days: 30
+          if-no-files-found: error
+
   msrv:
     name: MSRV (rust-version from Cargo.toml)
     runs-on: ubuntu-24.04
