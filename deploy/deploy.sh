@@ -55,6 +55,7 @@ BUILD="$HOME/src/Bladephoriafonk-Website"
 BACKUPS="$HOME/backups"
 BIN="$SITE_DIR/bladephoria-web"
 UNIT=/etc/systemd/system/bladephoria-oauth.service
+UNIT_DROPINS=/etc/systemd/system/bladephoria-oauth.service.d
 NGINX_SITE=/etc/nginx/sites-available/bladephoriafonk.xyz
 mkdir -p "$BACKUPS"
 
@@ -75,7 +76,8 @@ fi
 # Configuration and data backup before anything changes; only the newest is kept.
 stamp=$(date -u +%Y%m%d-%H%M%S)
 config_backup="$BACKUPS/website-config-$stamp.tar.gz"
-sudo tar -czf "$config_backup" -P "$SITE_DIR/oauth/.env" "$SITE_DIR/oauth/data" "$UNIT" "$NGINX_SITE"
+dropins=(); [ -d "$UNIT_DROPINS" ] && dropins=("$UNIT_DROPINS")
+sudo tar -czf "$config_backup" -P "$SITE_DIR/oauth/.env" "$SITE_DIR/oauth/data" "$UNIT" "${dropins[@]}" "$NGINX_SITE"
 sudo chown "$(id -u):$(id -g)" "$config_backup"
 chmod 600 "$config_backup"
 find "$BACKUPS" -maxdepth 1 -name 'website-config-*.tar.gz' ! -path "$config_backup" -delete

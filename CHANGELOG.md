@@ -30,6 +30,10 @@
 ### Security
 - At most `MAX_PENDING_LOGINS` (default 10000, 0 = no limit) login attempts are kept while
   waiting for Discord, so a flood of login requests cannot fill the memory.
+- A systemd sandbox (`deploy/bladephoria-oauth.service.d/hardening.conf`): the server can write
+  only to `oauth/data/`, `diagnostics/` and `media/`, has no capabilities and creates files
+  with mode 600. `systemd-analyze security` went from 9.2 (unsafe) to 1.6 (ok). Data and
+  diagnostics files on the server are 600, their directories 700.
 
 ### Removed
 - `assets/favicon.svg` from the repository (it stays on the server with the other uploads).

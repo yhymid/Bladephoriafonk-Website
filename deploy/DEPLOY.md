@@ -51,6 +51,21 @@ Ustawienia (zmienne srodowiskowe): `BPF_DEPLOY_SSH`, `BPF_DEPLOY_KEY`,
    sudo systemctl enable --now bladephoria-oauth
    ```
 
+   Ograniczenia uslugi (sandbox systemd):
+   [bladephoria-oauth.service.d/hardening.conf](bladephoria-oauth.service.d/hardening.conf)
+
+   ```bash
+   sudo install -D -m 644 deploy/bladephoria-oauth.service.d/hardening.conf \
+     /etc/systemd/system/bladephoria-oauth.service.d/hardening.conf
+   sudo systemctl daemon-reload && sudo systemctl restart bladephoria-oauth
+   systemd-analyze security bladephoria-oauth   # 1.6 OK (bez niego 9.2)
+   ```
+
+   Usluga moze wtedy zapisywac tylko w `oauth/data/`, `diagnostics/` i
+   `media/`; reszta systemu jest tylko do odczytu, nowe pliki dostaja prawa
+   600 (`UMask=0077`). Powrot: usunac plik, `daemon-reload`, restart.
+   Dane trzymaj z prawami 700/600: `chmod 700 oauth oauth/data diagnostics`.
+
 4. Nginx: [nginx-site.conf.example](nginx-site.conf.example).
 5. `deploy/deploy.sh` z komputera lokalnego.
 
