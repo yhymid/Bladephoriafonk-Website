@@ -1,0 +1,122 @@
+{
+  "status": 200,
+  "body": {
+    "type": 0,
+    "code": "2xTr8pmk36",
+    "expires_at": null,
+    "id": "1561341812944277577",
+    "guild": {
+      "id": "1008460463148900373",
+      "name": "Bladephoriafonk",
+      "splash": "b217abafe4d7de111b3b653716f86083",
+      "banner": "1a365427fec9d8f77e072f742f228d93",
+      "description": null,
+      "icon": "a_5f47e76cff51f39ac1dc0acbd1f46d9b",
+      "features": [
+        "ACTIVITY_FEED_DISABLED_BY_USER",
+        "AUDIO_BITRATE_128_KBPS",
+        "INVITE_SPLASH",
+        "AUTO_MODERATION",
+        "RAID_ALERTS_DISABLED",
+        "ANIMATED_ICON",
+        "TIERLESS_BOOSTING",
+        "BYPASS_SLOWMODE_PERMISSION_MIGRATION_COMPLETE",
+        "PIN_PERMISSION_MIGRATION_COMPLETE",
+        "SOUNDBOARD",
+        "ENABLED_MODERATION_EXPERIENCE_FOR_NON_COMMUNITY",
+        "GUILD_ONBOARDING_EVER_ENABLED",
+        "NEWS",
+        "GUILD_ONBOARDING_HAS_PROMPTS",
+        "STAGE_CHANNEL_VIEWERS_50",
+        "CHANNEL_ICON_EMOJIS_GENERATED",
+        "MEMBER_VERIFICATION_GATE_ENABLED",
+        "GUILD_ONBOARDING",
+        "COMMUNITY",
+        "VIDEO_BITRATE_ENHANCED",
+        "VIDEO_QUALITY_720_60FPS"
+      ],
+      "verification_level": 1,
+      "vanity_url_code": null,
+      "nsfw_level": 0,
+      "nsfw": false,
+      "premium_subscription_count": 3,
+      "premium_tier": 1
+    },
+    "guild_id": "1008460463148900373",
+    "channel": {
+      "id": "1303200521221308478",
+      "type": 0,
+      "name": "🧾︙logger"
+    },
+    "profile": {
+      "id": "1008460463148900373",
+      "name": "Bladephoriafonk",
+      "icon_hash": "a_5f47e76cff51f39ac1dc0acbd1f46d9b",
+      "member_count": 48,
+      "online_count": 8,
+      "description": null,
+      "banner_hash": null,
+      "game_application_ids": [
+        "359509666876751872",
+        "425749516583698432",
+        "359510373361254400",
+        "363430548028522496",
+        "1276737795012165766",
+        "1158877933042143272",
+        "356954277803065354",
+        "1402416952713941106",
+        "1312342421090336818",
+        "1402418594532298837",
+        "1124351756931977307"
+      ],
+      "game_activity": {
+        "1276737795012165766": {
+          "activity_level": 1,
+          "activity_score": 13
+        },
+        "1158877933042143272": {
+          "activity_level": 2,
+          "activity_score": 62
+        }
+      },
+      "tag": "BPF",
+      "badge": 6,
+      "badge_color_primary": null,
+      "badge_color_secondary": null,
+      "badge_hash": "c2118df7b492f73677e51de772b466ed",
+      "traits": [
+        {
+          "emoji_id": null,
+          "emoji_name": "flag_us",
+          "emoji_animated": false,
+          "label": "International",
+          "position": 0
+        },
+        {
+          "emoji_id": null,
+          "emoji_name": "satellite",
+          "emoji_animated": false,
+          "label": "Tracking Apps",
+          "position": 1
+        },
+        {
+          "emoji_id": null,
+          "emoji_name": "underage",
+          "emoji_animated": false,
+          "label": "Adult Content",
+          "position": 2
+        }
+      ],
+      "features": [
+        "MEMBER_VERIFICATION_GATE_ENABLED",
+        "COMMUNITY"
+      ],
+      "visibility": 3,
+      "custom_banner_hash": null,
+      "premium_subscription_count": 3,
+      "premium_tier": 1
+    },
+    "approximate_member_count": 48,
+    "approximate_presence_count": 8
+  }
+}

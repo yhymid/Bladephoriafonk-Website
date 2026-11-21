@@ -286,15 +286,7 @@ impl Discord {
             )
             .await
             .ok()?;
-        let text = |key: &str| member.get(key).and_then(Value::as_str).unwrap_or_default();
-
-        Some(json!({
-            "guild_id": guild_id,
-            "guild_name": js_str(guild.get("name")),
-            "guild_banner_url": guild_member_banner_url(&user_id, &guild_id, member.get("banner")),
-            "guild_bio": text("bio"),
-            "guild_nick": text("nick"),
-        }))
+        Some(guild_profile_from(&user_id, guild, &member))
     }
 
     async fn request_invite_snapshot(&self, invite_code: &str) -> Result<Map<String, Value>, Fail> {
@@ -304,67 +296,7 @@ impl Discord {
             .get(&endpoint)
             .header("user-agent", "BladephoriafonkWebsite/2.0");
         let (status, body) = self.fetch("invites", request).await?;
-        if !status.is_success() {
-            return Err(Fail(format!(
-                "invite_fetch_failed:{}:{}",
-                status.as_u16(),
-                first_chars(&String::from_utf8_lossy(&body), 200)
-            )));
-        }
-
-        let data: Value = serde_json::from_slice(&body)?;
-        let guild = data.get("guild").filter(|value| truthy(value));
-        let profile = data.get("profile").filter(|value| truthy(value));
-        let from_guild = |key: &str| guild.and_then(|guild| guild.get(key));
-        let from_profile = |key: &str| profile.and_then(|profile| profile.get(key));
-        let first_truthy = |candidates: [Option<&Value>; 2]| {
-            candidates
-                .into_iter()
-                .map(js_str)
-                .find(|value| !value.is_empty())
-                .unwrap_or_default()
-        };
-        let first_present = |candidates: [Option<&Value>; 2]| {
-            candidates
-                .into_iter()
-                .flatten()
-                .find(|value| !value.is_null())
-                .cloned()
-                .unwrap_or_else(|| json!(0))
-        };
-        let number = |key: &str| from_guild(key).filter(|value| value.is_number()).cloned();
-
-        let guild_id = first_truthy([from_guild("id"), data.get("guild_id")]);
-        let icon_hash = first_truthy([from_guild("icon"), from_profile("icon_hash")]);
-        let icon_url = if guild_id.is_empty() || icon_hash.is_empty() {
-            String::new()
-        } else {
-            let ext = if icon_hash.starts_with("a_") {
-                "gif"
-            } else {
-                "png"
-            };
-            format!("https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=128")
-        };
-
-        let snapshot = json!({
-            "guild_id": guild_id,
-            "description": first_truthy([from_guild("description"), from_profile("description")]),
-            "member_count": first_present([data.get("approximate_member_count"), from_profile("member_count")]),
-            "online_count": first_present([data.get("approximate_presence_count"), from_profile("online_count")]),
-            "verification_level": number("verification_level"),
-            "premium_tier": number("premium_tier").unwrap_or_else(|| json!(0)),
-            "premium_subscription_count": number("premium_subscription_count").unwrap_or_else(|| json!(0)),
-            "icon_url": icon_url,
-            "source_url": endpoint,
-            "updated_at": now_iso(),
-            "invite_code_used": invite_code,
-            "stale": false,
-        });
-        match snapshot {
-            Value::Object(map) => Ok(map),
-            _ => unreachable!("json! object literal"),
-        }
+        parse_invite(status.as_u16(), &body, &endpoint, invite_code)
     }
 
     /// Public invite data of a server. A dead invite (404) moves on to the
@@ -406,6 +338,90 @@ impl Discord {
 
 /// Name and links of a server, with `working` being the index of the invite
 /// code to present as the main link.
+/// Turns a Discord invite response into the public server snapshot.
+/// A non-2xx status becomes `invite_fetch_failed:<status>:<body>`; 404
+/// means the invite is dead and the next code from the list is tried.
+fn parse_invite(
+    status: u16,
+    body: &[u8],
+    endpoint: &str,
+    invite_code: &str,
+) -> Result<Map<String, Value>, Fail> {
+    if !(200..300).contains(&status) {
+        return Err(Fail(format!(
+            "invite_fetch_failed:{status}:{}",
+            first_chars(&String::from_utf8_lossy(body), 200)
+        )));
+    }
+
+    let data: Value = serde_json::from_slice(body)?;
+    let guild = data.get("guild").filter(|value| truthy(value));
+    let profile = data.get("profile").filter(|value| truthy(value));
+    let from_guild = |key: &str| guild.and_then(|guild| guild.get(key));
+    let from_profile = |key: &str| profile.and_then(|profile| profile.get(key));
+    let first_truthy = |candidates: [Option<&Value>; 2]| {
+        candidates
+            .into_iter()
+            .map(js_str)
+            .find(|value| !value.is_empty())
+            .unwrap_or_default()
+    };
+    let first_present = |candidates: [Option<&Value>; 2]| {
+        candidates
+            .into_iter()
+            .flatten()
+            .find(|value| !value.is_null())
+            .cloned()
+            .unwrap_or_else(|| json!(0))
+    };
+    let number = |key: &str| from_guild(key).filter(|value| value.is_number()).cloned();
+
+    let guild_id = first_truthy([from_guild("id"), data.get("guild_id")]);
+    let icon_hash = first_truthy([from_guild("icon"), from_profile("icon_hash")]);
+    let icon_url = if guild_id.is_empty() || icon_hash.is_empty() {
+        String::new()
+    } else {
+        let ext = if icon_hash.starts_with("a_") {
+            "gif"
+        } else {
+            "png"
+        };
+        format!("https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=128")
+    };
+
+    let snapshot = json!({
+        "guild_id": guild_id,
+        "description": first_truthy([from_guild("description"), from_profile("description")]),
+        "member_count": first_present([data.get("approximate_member_count"), from_profile("member_count")]),
+        "online_count": first_present([data.get("approximate_presence_count"), from_profile("online_count")]),
+        "verification_level": number("verification_level"),
+        "premium_tier": number("premium_tier").unwrap_or_else(|| json!(0)),
+        "premium_subscription_count": number("premium_subscription_count").unwrap_or_else(|| json!(0)),
+        "icon_url": icon_url,
+        "source_url": endpoint,
+        "updated_at": now_iso(),
+        "invite_code_used": invite_code,
+        "stale": false,
+    });
+    match snapshot {
+        Value::Object(map) => Ok(map),
+        _ => unreachable!("json! object literal"),
+    }
+}
+
+/// The guild part of a profile, from the chosen guild and the member object.
+fn guild_profile_from(user_id: &str, guild: &Value, member: &Value) -> Value {
+    let guild_id = js_str(guild.get("id"));
+    let text = |key: &str| member.get(key).and_then(Value::as_str).unwrap_or_default();
+    json!({
+        "guild_id": guild_id,
+        "guild_name": js_str(guild.get("name")),
+        "guild_banner_url": guild_member_banner_url(user_id, &guild_id, member.get("banner")),
+        "guild_bio": text("bio"),
+        "guild_nick": text("nick"),
+    })
+}
+
 pub fn server_identity(server: &ServerConfig, working: usize) -> Map<String, Value> {
     let link = |index: usize| {
         server
@@ -557,6 +573,114 @@ pub fn public_profile_snapshot(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Real or Discord-shaped responses saved in `tests/fixtures/discord/`.
+    fn fixture(name: &str) -> Value {
+        let path = format!(
+            "{}/tests/fixtures/discord/{name}",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap()
+    }
+
+    /// Compares with `<name>.expected.json`; `BLADEPHORIA_UPDATE_SNAPSHOTS=1`
+    /// rewrites the file instead. Time stamps are left out.
+    fn snapshot(name: &str, mut actual: Value) {
+        if let Value::Object(map) = &mut actual {
+            map.remove("updated_at");
+        }
+        if let Some(Value::Object(map)) = actual.get_mut("profile") {
+            map.remove("updated_at");
+        }
+        let path = format!(
+            "{}/tests/fixtures/discord/{name}.expected.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let text = serde_json::to_string_pretty(&actual).unwrap() + "\n";
+        if std::env::var_os("BLADEPHORIA_UPDATE_SNAPSHOTS").is_some() {
+            std::fs::write(&path, &text).unwrap();
+            return;
+        }
+        let expected = std::fs::read_to_string(&path)
+            .unwrap_or_else(|_| panic!("missing {path}; run with BLADEPHORIA_UPDATE_SNAPSHOTS=1"));
+        assert_eq!(
+            text, expected,
+            "{name} changed; review and update the snapshot"
+        );
+    }
+
+    fn invite_fixture(name: &str, code: &str) -> Result<Map<String, Value>, Fail> {
+        let saved = fixture(&format!("{name}.json"));
+        let status = u16::try_from(saved["status"].as_u64().unwrap()).unwrap();
+        let body = serde_json::to_vec(&saved["body"]).unwrap();
+        parse_invite(status, &body, "https://discord.test/invite", code)
+    }
+
+    #[test]
+    fn real_invite_responses() {
+        for (name, code) in [("invite-blade", "2xTr8pmk36"), ("invite-pmc", "2upsTHV5Bv")] {
+            let parsed = invite_fixture(name, code).unwrap();
+            assert!(parsed["member_count"].as_u64().unwrap() > 0);
+            assert!(
+                parsed["icon_url"]
+                    .as_str()
+                    .unwrap()
+                    .starts_with("https://cdn.discordapp.com/icons/")
+            );
+            snapshot(name, Value::Object(parsed));
+        }
+    }
+
+    #[test]
+    fn unknown_invite_means_try_the_next_code() {
+        let error = invite_fixture("invite-unknown", "dead").unwrap_err();
+        // invite_snapshot() moves on to the next code only for this prefix.
+        assert!(
+            error.0.starts_with("invite_fetch_failed:404:"),
+            "{}",
+            error.0
+        );
+        assert!(error.0.contains("10006"));
+        assert!(
+            parse_invite(429, b"{}", "", "x")
+                .unwrap_err()
+                .0
+                .starts_with("invite_fetch_failed:429:")
+        );
+    }
+
+    #[test]
+    fn login_responses_to_public_profile() {
+        let saved = fixture("login.json");
+        let mut cfg = Config::load(None).unwrap();
+        cfg.primary_guild_id = String::new();
+        cfg.primary_guild_name_hint = String::new();
+        let guilds = saved["guilds"].as_array().unwrap();
+        // The user's server tag points at Bladephoriafonk, not the first guild.
+        let guild = pick_preferred_guild(&cfg, &saved["user"], guilds).unwrap();
+        assert_eq!(guild["id"], "200000000000000002");
+
+        let guild_profile = guild_profile_from("100000000000000001", guild, &saved["member"]);
+        let profile =
+            public_profile_snapshot(&saved["user"], &saved["connections"], Some(&guild_profile));
+        let text = profile.to_string();
+        for private in [
+            "not-requested@example.com",
+            "mfa_enabled",
+            "example-gh",
+            "Example Channel",
+            "400000000000000004",
+        ] {
+            assert!(
+                !text.contains(private),
+                "{private} leaked into the public profile"
+            );
+        }
+        snapshot(
+            "login",
+            json!({ "guild_profile": guild_profile, "profile": profile }),
+        );
+    }
 
     #[test]
     fn public_user_shape() {

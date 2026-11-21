@@ -1,0 +1,7 @@
+{
+  "status": 404,
+  "body": {
+    "message": "Unknown Invite",
+    "code": 10006
+  }
+}

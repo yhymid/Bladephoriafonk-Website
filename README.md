@@ -62,6 +62,7 @@ Testy i kontrola kodu:
 ```bash
 cd backend
 cargo test            # testy jednostkowe + e2e (prawdziwa binarka i atrapa Discorda)
+BLADEPHORIA_UPDATE_SNAPSHOTS=1 cargo test   # odswieza oczekiwane wyniki w tests/fixtures/discord/
 cargo clippy --all-targets -- -D warnings
 ```
 

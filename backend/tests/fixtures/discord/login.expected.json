@@ -1,0 +1,46 @@
+{
+  "guild_profile": {
+    "guild_id": "200000000000000002",
+    "guild_name": "Bladephoriafonk",
+    "guild_banner_url": "https://cdn.discordapp.com/guilds/200000000000000002/users/100000000000000001/banners/a_0011223344556677.gif?size=1024",
+    "guild_bio": "Gram w modpacki",
+    "guild_nick": "Ex"
+  },
+  "profile": {
+    "user": {
+      "username": "example.user",
+      "global_name": "Example",
+      "banner_color": "#3498db",
+      "accent_color": 3447003,
+      "public_flags": 64,
+      "avatar_url": "https://cdn.discordapp.com/avatars/100000000000000001/a_1234567890abcdef1234567890abcdef.gif?size=256",
+      "banner_url": "https://cdn.discordapp.com/banners/100000000000000001/abcdef1234567890abcdef1234567890.png?size=1024",
+      "guild_banner_url": "https://cdn.discordapp.com/guilds/200000000000000002/users/100000000000000001/banners/a_0011223344556677.gif?size=1024",
+      "guild_name": "Bladephoriafonk",
+      "guild_bio": "Gram w modpacki",
+      "guild_nick": "Ex"
+    },
+    "connections": [
+      {
+        "name": "Example on Steam",
+        "type": "steam",
+        "verified": true,
+        "visibility": 1,
+        "show_activity": true,
+        "friend_sync": false,
+        "two_way_link": false,
+        "revoked": false
+      },
+      {
+        "name": "example_tw",
+        "type": "twitch",
+        "verified": false,
+        "visibility": 1,
+        "show_activity": false,
+        "friend_sync": false,
+        "two_way_link": false,
+        "revoked": false
+      }
+    ]
+  }
+}

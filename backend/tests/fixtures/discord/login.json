@@ -1,0 +1,43 @@
+{
+  "_note": "Hand-written in the shape of the Discord API responses (users/@me, users/@me/connections, users/@me/guilds, users/@me/guilds/{id}/member); ids and names are made up.",
+  "user": {
+    "id": "100000000000000001",
+    "username": "example.user",
+    "global_name": "Example",
+    "discriminator": "0",
+    "avatar": "a_1234567890abcdef1234567890abcdef",
+    "banner": "abcdef1234567890abcdef1234567890",
+    "accent_color": 3447003,
+    "banner_color": "#3498db",
+    "public_flags": 64,
+    "locale": "pl",
+    "mfa_enabled": true,
+    "premium_type": 2,
+    "email": "not-requested@example.com",
+    "primary_guild": {
+      "identity_guild_id": "200000000000000002",
+      "identity_enabled": true,
+      "tag": "BPF"
+    }
+  },
+  "connections": [
+    { "id": "s1", "name": "Example on Steam", "type": "steam", "verified": true, "visibility": 1, "revoked": false, "friend_sync": false, "show_activity": true },
+    { "id": "g1", "name": "example-gh", "type": "github", "verified": true, "visibility": 0, "revoked": false },
+    { "id": "y1", "name": "Example Channel", "type": "youtube", "verified": true, "visibility": 1, "revoked": true },
+    { "id": "t1", "name": "example_tw", "type": "twitch", "verified": false, "visibility": 1 }
+  ],
+  "guilds": [
+    { "id": "300000000000000003", "name": "Some Other Server", "icon": null, "owner": false, "permissions": "0", "features": [] },
+    { "id": "200000000000000002", "name": "Bladephoriafonk", "icon": "a_fedcba", "owner": false, "permissions": "1024", "features": ["COMMUNITY"] }
+  ],
+  "member": {
+    "nick": "Ex",
+    "bio": "Gram w modpacki",
+    "banner": "a_0011223344556677",
+    "avatar": null,
+    "roles": ["400000000000000004"],
+    "joined_at": "2025-01-01T00:00:00.000000+00:00",
+    "deaf": false,
+    "mute": false
+  }
+}

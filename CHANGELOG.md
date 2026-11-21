@@ -16,6 +16,10 @@
 - GitHub Actions CI: fmt, clippy, unit and end-to-end tests, release build, `--check-config` on
   the example configuration, the MSRV (Rust 1.88) and a check of links between the Markdown
   files (`scripts/check-links.py`). Actions are pinned to commit SHAs.
+- Tests on saved Discord responses (`backend/tests/fixtures/discord/`): real public invite
+  responses and a login in the shape of the Discord API are compared with expected public JSON,
+  and the tests check that no private field (e-mail, hidden connections, roles) reaches it.
+  `BLADEPHORIA_UPDATE_SNAPSHOTS=1 cargo test` refreshes the expected files.
 
 ### Changed
 - `deploy/deploy.sh` builds in `~/src/Bladephoriafonk-Website`, keeps only the files the server

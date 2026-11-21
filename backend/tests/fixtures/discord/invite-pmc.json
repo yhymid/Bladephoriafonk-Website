@@ -1,0 +1,63 @@
+{
+  "status": 200,
+  "body": {
+    "type": 0,
+    "code": "2upsTHV5Bv",
+    "expires_at": null,
+    "id": "1503398784229708018",
+    "guild": {
+      "id": "1164515203023642695",
+      "name": "PMC Ashley Group",
+      "splash": null,
+      "banner": null,
+      "description": ":(",
+      "icon": "0bf9e90217094cea331b06fa049e81a0",
+      "features": [
+        "CHANNEL_ICON_EMOJIS_GENERATED",
+        "AUTO_MODERATION",
+        "NEWS",
+        "TIERLESS_BOOSTING_SYSTEM_MESSAGE",
+        "COMMUNITY",
+        "SOUNDBOARD"
+      ],
+      "verification_level": 1,
+      "vanity_url_code": null,
+      "nsfw_level": 0,
+      "nsfw": false,
+      "premium_subscription_count": 0,
+      "premium_tier": 0
+    },
+    "guild_id": "1164515203023642695",
+    "channel": {
+      "id": "1172891151926317078",
+      "type": 0,
+      "name": "moderator-only"
+    },
+    "profile": {
+      "id": "1164515203023642695",
+      "name": "PMC Ashley Group",
+      "icon_hash": "0bf9e90217094cea331b06fa049e81a0",
+      "member_count": 14,
+      "online_count": 5,
+      "description": ":(",
+      "banner_hash": null,
+      "game_application_ids": [],
+      "game_activity": {},
+      "tag": null,
+      "badge": 0,
+      "badge_color_primary": "#ff0000",
+      "badge_color_secondary": "#800000",
+      "badge_hash": null,
+      "traits": [],
+      "features": [
+        "COMMUNITY"
+      ],
+      "visibility": 2,
+      "custom_banner_hash": null,
+      "premium_subscription_count": 0,
+      "premium_tier": 0
+    },
+    "approximate_member_count": 14,
+    "approximate_presence_count": 5
+  }
+}
