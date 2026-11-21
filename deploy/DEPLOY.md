@@ -15,12 +15,15 @@ Skrypt:
 1. wysyla zacommitowany stan repo do `~/src/Bladephoriafonk-Website` na VPS
    i buduje tam binarke (`cargo build --release --locked`; VPS ma inny glibc
    niz komputer lokalny, wiec buduje sie tylko tam),
-2. robi kopie konfiguracji (`oauth/.env`, unit systemd, strona nginx) do
-   `~/backups/website-config-<czas>.tar.gz` - trzymana jest tylko najnowsza,
-3. kopiuje do katalogu strony tylko pliki potrzebne do dzialania (strony,
+2. sprawdza nowa binarka produkcyjny config i dane (`--check-config`); przy
+   bledzie konczy, zanim cokolwiek na serwerze sie zmieni,
+3. robi kopie konfiguracji i danych (`oauth/.env`, `oauth/data/`, unit systemd,
+   strona nginx) do `~/backups/website-config-<czas>.tar.gz` - trzymana jest
+   tylko najnowsza,
+4. kopiuje do katalogu strony tylko pliki potrzebne do dzialania (strony,
    `site-lang.js`, `profile/index.html`); pliki usuniete z repo znikaja
    z serwera (lista w `.deployed-files`),
-4. gdy binarka sie zmienila: zapisuje poprzednia jako
+5. gdy binarka sie zmienila: zapisuje poprzednia jako
    `~/backups/bladephoria-web.bin.<commit>` (tylko jedna), podmienia
    `bladephoria-web` w katalogu strony, restartuje usluge i sprawdza
    `/health`. Gdy nowa wersja nie odpowiada, przywraca poprzednia binarke.

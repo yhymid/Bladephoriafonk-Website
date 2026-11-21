@@ -11,6 +11,8 @@
 - An end-to-end test that runs the real server against a fake Discord API.
 - The diagnostics report shows the memory used at the end of each of the last 7 days and warns
   when it grows every day.
+- `bladephoria-web --check-config` validates the configuration and the data files without starting
+  the server or writing anything; `--version` prints the version.
 
 ### Changed
 - `deploy/deploy.sh` builds in `~/src/Bladephoriafonk-Website`, keeps only the files the server
@@ -18,6 +20,8 @@
   `~/backups/` before every swap and uses the `operator_vps` SSH key.
 - The server binary lives in the site directory (`bladephoria-web`).
 - `README.md` moved from `oauth/` to the root of the repository.
+- `deploy/deploy.sh` runs `--check-config` with the new binary before anything on the server
+  changes, and the configuration backup also holds `oauth/data/`.
 
 ### Fixed
 - Diagnostics no longer count complete responses of streamed files (pages without compression)

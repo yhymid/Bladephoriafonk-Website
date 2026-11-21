@@ -49,6 +49,14 @@ Potem otworz:
 Osobny serwer deweloperski nie jest juz potrzebny - ten sam program serwuje
 strony i API.
 
+Sprawdzenie konfiguracji bez uruchamiania serwera (niczego nie zapisuje,
+sekretow nie wypisuje, kod wyjscia 1 przy bledach):
+
+```bash
+cd backend
+cargo run --release -- --env-file ../oauth/.env --check-config
+```
+
 Testy i kontrola kodu:
 
 ```bash

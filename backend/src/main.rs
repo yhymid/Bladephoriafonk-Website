@@ -5,6 +5,7 @@
 //! `/auth/*` Discord OAuth API.
 
 mod api;
+mod check;
 mod config;
 mod diagnostics;
 mod discord;
@@ -29,10 +30,14 @@ use tower_http::compression::CompressionLayer;
 use crate::api::App;
 use crate::config::Config;
 
-const USAGE: &str = "Usage: bladephoria-web [--env-file <path>]
+const USAGE: &str = "Usage: bladephoria-web [--env-file <path>] [--check-config]
 
 Serves the Bladephoriafonk website and its Discord OAuth API.
-Configuration is read from environment variables (see oauth/.env.example).";
+Configuration is read from environment variables (see oauth/.env.example).
+
+  --check-config   validate the configuration and data files, then exit
+                   (nothing is started or written; exit code 1 on errors)
+  --version        print the version";
 
 /// Compress text responses only; images, archives and video are already
 /// compressed and would just burn CPU.
@@ -89,11 +94,19 @@ async fn shutdown_signal() {
     }
 }
 
-fn env_file_argument() -> Result<Option<PathBuf>, String> {
+struct Args {
+    env_file: Option<PathBuf>,
+    check_config: bool,
+}
+
+fn parse_args() -> Result<Args, String> {
     let mut args = std::env::args().skip(1);
     let mut env_file = None;
+    let mut check_config = false;
     while let Some(arg) = args.next() {
-        if arg == "--env-file" {
+        if arg == "--check-config" {
+            check_config = true;
+        } else if arg == "--env-file" {
             env_file = Some(PathBuf::from(args.next().ok_or("--env-file needs a path")?));
         } else if let Some(path) = arg.strip_prefix("--env-file=") {
             env_file = Some(PathBuf::from(path));
@@ -101,7 +114,33 @@ fn env_file_argument() -> Result<Option<PathBuf>, String> {
             return Err(format!("unknown argument: {arg}\n\n{USAGE}"));
         }
     }
-    Ok(env_file)
+    Ok(Args {
+        env_file,
+        check_config,
+    })
+}
+
+/// Prints every finding; fails when one of them is an error.
+async fn check_config(cfg: &Config) -> Result<(), String> {
+    let findings = check::check_config(cfg).await;
+    let mut errors = 0;
+    for found in &findings {
+        let mark = match found.level {
+            check::Level::Ok => "ok   ",
+            check::Level::Warn => "warn ",
+            check::Level::Error => {
+                errors += 1;
+                "ERROR"
+            }
+        };
+        println!("{mark} {}", found.text);
+    }
+    if errors == 0 {
+        println!("configuration ok");
+        Ok(())
+    } else {
+        Err(format!("configuration has {errors} error(s)"))
+    }
 }
 
 /// First 12 characters of the commit recorded by `deploy/deploy.sh`.
@@ -127,8 +166,11 @@ async fn audit_data(cfg: &Config) {
 }
 
 async fn run() -> Result<(), String> {
-    let env_file = env_file_argument()?;
-    let cfg = Config::load(env_file.as_deref())?;
+    let args = parse_args()?;
+    let cfg = Config::load(args.env_file.as_deref())?;
+    if args.check_config {
+        return check_config(&cfg).await;
+    }
     let started = Instant::now();
 
     // Diagnostics must never keep the site down: a failure only disables them.
@@ -226,6 +268,10 @@ async fn run() -> Result<(), String> {
 async fn main() -> ExitCode {
     if std::env::args().any(|arg| arg == "--help" || arg == "-h") {
         println!("{USAGE}");
+        return ExitCode::SUCCESS;
+    }
+    if std::env::args().any(|arg| arg == "--version" || arg == "-V") {
+        println!("bladephoria-web {}", env!("CARGO_PKG_VERSION"));
         return ExitCode::SUCCESS;
     }
     match run().await {

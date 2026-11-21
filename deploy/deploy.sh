@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Deploys the committed HEAD of this repository to the VPS:
-# upload -> build -> backup -> install -> restart -> health check, with
+# upload -> build -> check config -> backup -> install -> restart -> health
+# check, with
 # rollback of the binary when the new one does not answer.
 #
 #   deploy/deploy.sh
@@ -11,8 +12,8 @@
 #                                   `bladephoria-web`, pages, assets/, media/,
 #                                   profile/, oauth/.env + oauth/data/,
 #                                   diagnostics/
-#   ~/backups/website-config-*.tar.gz      .env, systemd unit, nginx site
-#                                          (only the newest one is kept)
+#   ~/backups/website-config-*.tar.gz      .env, oauth/data/, systemd unit,
+#                                          nginx site (only the newest one)
 #   ~/backups/bladephoria-web.bin.<commit> the previous binary (only one)
 #
 # Settings (environment variables):
@@ -61,10 +62,20 @@ cd "$BUILD/backend"
 nice -n 15 "$HOME/.cargo/bin/cargo" build --release --locked -j 3 2>&1 | tail -n 3
 NEW_BIN="$BUILD/backend/target/release/bladephoria-web"
 
-# Configuration backup before anything changes; only the newest is kept.
+# The new binary validates the production config and data before anything
+# on the server changes (it starts nothing and writes nothing).
+if check=$(cd "$SITE_DIR" && "$NEW_BIN" --check-config --env-file "$SITE_DIR/oauth/.env" 2>&1); then
+  printf '%s\n' "$check" | grep -v '^ok ' || true
+else
+  printf '%s\n' "$check" | grep -v '^ok ' >&2 || true
+  echo "!! the new version rejects the configuration - nothing was changed" >&2
+  exit 1
+fi
+
+# Configuration and data backup before anything changes; only the newest is kept.
 stamp=$(date -u +%Y%m%d-%H%M%S)
 config_backup="$BACKUPS/website-config-$stamp.tar.gz"
-sudo tar -czf "$config_backup" -P "$SITE_DIR/oauth/.env" "$UNIT" "$NGINX_SITE"
+sudo tar -czf "$config_backup" -P "$SITE_DIR/oauth/.env" "$SITE_DIR/oauth/data" "$UNIT" "$NGINX_SITE"
 sudo chown "$(id -u):$(id -g)" "$config_backup"
 chmod 600 "$config_backup"
 find "$BACKUPS" -maxdepth 1 -name 'website-config-*.tar.gz' ! -path "$config_backup" -delete
