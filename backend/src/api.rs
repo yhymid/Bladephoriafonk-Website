@@ -508,6 +508,35 @@ pub async fn health() -> Response {
     )
 }
 
+/// Stores a login attempt. A flood of login requests must not grow memory
+/// without bound: at the limit, expired attempts go first, then the oldest.
+/// Returns whether a still valid attempt had to be dropped.
+fn insert_login_state(
+    states: &mut HashMap<String, LoginState>,
+    key: String,
+    state: LoginState,
+    limit: usize,
+) -> bool {
+    let mut evicted = false;
+    if limit > 0 && states.len() >= limit {
+        let now = now_ms();
+        states.retain(|_, state| now - state.created_at <= STATE_TTL_MS);
+        while states.len() >= limit {
+            let Some(oldest) = states
+                .iter()
+                .min_by_key(|(_, state)| state.created_at)
+                .map(|(key, _)| key.clone())
+            else {
+                break;
+            };
+            states.remove(&oldest);
+            evicted = true;
+        }
+    }
+    states.insert(key, state);
+    evicted
+}
+
 pub async fn discord_login(State(app): State<SharedApp>, RawQuery(query): RawQuery) -> Response {
     let cfg = &app.cfg;
     if cfg.discord_client_id.is_empty()
@@ -527,13 +556,26 @@ pub async fn discord_login(State(app): State<SharedApp>, RawQuery(query): RawQue
     let return_to =
         sanitize_return_to(&query_param(query.as_deref(), "return_to").unwrap_or_default());
     let state = random_hex(20);
-    lock(&app.states).insert(
+    let evicted = insert_login_state(
+        &mut lock(&app.states),
         state.clone(),
         LoginState {
             created_at: now_ms(),
             return_to,
         },
+        cfg.max_pending_logins,
     );
+    if evicted {
+        diagnostics::anomaly_throttled(
+            "login_states_full",
+            "",
+            format!(
+                "{} logins waiting for Discord, the oldest are dropped",
+                cfg.max_pending_logins
+            ),
+            std::time::Duration::from_secs(600),
+        );
+    }
 
     let params = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("client_id", &cfg.discord_client_id)
@@ -1002,6 +1044,41 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert(COOKIE, HeaderValue::from_str(cookie).unwrap());
         headers
+    }
+
+    #[test]
+    fn login_states_are_bounded() {
+        let login = |created_at| LoginState {
+            created_at,
+            return_to: "/".to_owned(),
+        };
+        let now = now_ms();
+        let mut states = HashMap::new();
+        states.insert("expired".to_owned(), login(now - STATE_TTL_MS - 1));
+        states.insert("old".to_owned(), login(now - 1000));
+        states.insert("new".to_owned(), login(now));
+        // Expired attempts make room first.
+        assert!(!insert_login_state(
+            &mut states,
+            "a".to_owned(),
+            login(now),
+            3
+        ));
+        assert!(!states.contains_key("expired"));
+        // Then the oldest valid one goes.
+        assert!(insert_login_state(
+            &mut states,
+            "b".to_owned(),
+            login(now),
+            3
+        ));
+        assert!(!states.contains_key("old"));
+        assert_eq!(states.len(), 3);
+        // 0 switches the limit off.
+        for index in 0..10 {
+            insert_login_state(&mut states, index.to_string(), login(now), 0);
+        }
+        assert_eq!(states.len(), 13);
     }
 
     #[test]

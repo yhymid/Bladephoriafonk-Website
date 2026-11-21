@@ -23,6 +23,10 @@
 - Diagnostics no longer count complete responses of streamed files (pages without compression)
   as aborted.
 
+### Security
+- At most `MAX_PENDING_LOGINS` (default 10000, 0 = no limit) login attempts are kept while
+  waiting for Discord, so a flood of login requests cannot fill the memory.
+
 ### Removed
 - `assets/favicon.svg` from the repository (it stays on the server with the other uploads).
 
