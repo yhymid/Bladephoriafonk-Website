@@ -10,6 +10,7 @@ mod config;
 mod diagnostics;
 mod discord;
 mod error;
+mod panel;
 mod static_files;
 mod store;
 mod util;
@@ -251,10 +252,29 @@ async fn run() -> Result<(), String> {
         }
     });
 
+    // The admin panel (127.0.0.1 only, off by default) stops after the site.
+    let (stop_panel, panel_stopped) = tokio::sync::watch::channel(false);
+    let panel = (app.cfg.admin_panel_port > 0).then(|| {
+        tokio::spawn(panel::serve(
+            app.clone(),
+            panel::ProcessInfo {
+                commit: deployed_commit(&app.cfg.site_root),
+                started,
+                started_ms: util::now_ms()
+                    - i64::try_from(started.elapsed().as_millis()).unwrap_or(0),
+            },
+            panel_stopped,
+        ))
+    });
+
     let served = axum::serve(listener, router(app.clone()))
         .with_graceful_shutdown(shutdown_signal())
         .await
         .map_err(|error| format!("server error: {error}"));
+    let _ = stop_panel.send(true);
+    if let Some(panel) = panel {
+        let _ = tokio::time::timeout(Duration::from_secs(5), panel).await;
+    }
     app.save_sessions(true).await;
     diagnostics::lifecycle(
         "stop",

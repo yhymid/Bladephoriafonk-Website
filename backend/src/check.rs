@@ -49,7 +49,7 @@ fn check_file(findings: &mut Vec<Finding>, what: &str, path: &Path, required: bo
 /// start) and its directory must be writable.
 /// What is wrong with a data file: `None` when it is fine. `strict` makes
 /// blank files and a wrong structure errors, as the server treats them.
-fn data_problem(what: &str, text: &str, strict: bool) -> Option<String> {
+pub fn data_problem(what: &str, text: &str, strict: bool) -> Option<String> {
     if text.trim().is_empty() {
         return strict.then(|| "file is blank".to_owned());
     }

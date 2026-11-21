@@ -20,6 +20,10 @@
   responses and a login in the shape of the Discord API are compared with expected public JSON,
   and the tests check that no private field (e-mail, hidden connections, roles) reaches it.
   `BLADEPHORIA_UPDATE_SNAPSHOTS=1 cargo test` refreshes the expected files.
+- A read-only admin panel on `127.0.0.1` (`ADMIN_PANEL_PORT`, off by default), opened with
+  `scripts/admin-tunnel.sh`: overview (version, memory, sessions, which Discord invite works),
+  the diagnostics reports, the data files and the service log with a filter and search. No
+  JavaScript, strict CSP, loopback Host only, secrets masked.
 
 ### Changed
 - `deploy/deploy.sh` builds in `~/src/Bladephoriafonk-Website`, keeps only the files the server

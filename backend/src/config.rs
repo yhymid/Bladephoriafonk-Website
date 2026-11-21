@@ -35,6 +35,10 @@ pub struct Config {
     /// Refuse data files with the wrong structure instead of treating them
     /// as empty (which would overwrite them on the next save).
     pub strict_data_files: bool,
+    /// Port of the read-only admin panel on 127.0.0.1; 0 = off.
+    pub admin_panel_port: u16,
+    /// systemd unit whose log the panel shows.
+    pub admin_panel_unit: String,
     pub json_body_limit: usize,
     pub changelog_json_body_limit: usize,
 
@@ -207,6 +211,8 @@ impl Config {
             session_data_ttl_ms: env.number("SESSION_DATA_TTL_MS", 5 * 60 * 1000),
             invite_cache_ttl_ms: env.number("INVITE_CACHE_TTL_MS", 60 * 1000),
             max_pending_logins: env.number("MAX_PENDING_LOGINS", 10_000),
+            admin_panel_port: env.number("ADMIN_PANEL_PORT", 0),
+            admin_panel_unit: env.string("ADMIN_PANEL_UNIT", "bladephoria-oauth"),
             strict_data_files: env.get("STRICT_DATA_FILES").is_none_or(|value| {
                 !matches!(
                     value.trim().to_ascii_lowercase().as_str(),

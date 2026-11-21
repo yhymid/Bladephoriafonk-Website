@@ -194,6 +194,7 @@ async fn diagnostics_record_everything_and_no_secrets() {
 
     let discord = start_mock_discord().await;
     let port = free_port();
+    let panel_port = free_port();
     let base = format!("http://127.0.0.1:{port}");
     let mut server = Server(
         Command::new(env!("CARGO_BIN_EXE_bladephoria-web"))
@@ -216,6 +217,7 @@ async fn diagnostics_record_everything_and_no_secrets() {
             .env("MEDIA_ROOT", temp.join("media"))
             .env("BLADEPHORIA_DIAGNOSTICS", "1")
             .env("BLADEPHORIA_DIAGNOSTICS_DIR", &diagnostics_dir)
+            .env("ADMIN_PANEL_PORT", panel_port.to_string())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
@@ -319,6 +321,46 @@ async fn diagnostics_record_everything_and_no_secrets() {
     created.bytes().await.unwrap();
     assert_eq!(status(format!("{base}/profile/{slug}/")).await, 200);
 
+    // The admin panel: loopback port only, every page renders, a foreign
+    // Host header is refused, the public port does not serve it.
+    let panel = format!("http://127.0.0.1:{panel_port}");
+    let mut panel_html = String::new();
+    for (path, expected) in [
+        ("/", "Bladephoriafonk"),
+        ("/diagnostics", "Diagnostyka"),
+        ("/data", "changelog.json"),
+        ("/logs", "Logi"),
+        ("/logs?errors=1&q=failed", "Logi"),
+        ("/style.css", "--bg: #000"),
+    ] {
+        let response = client.get(format!("{panel}{path}")).send().await.unwrap();
+        assert_eq!(response.status(), 200, "{path}");
+        if path != "/style.css" {
+            assert!(
+                response.headers()["content-security-policy"]
+                    .to_str()
+                    .unwrap()
+                    .starts_with("default-src 'none'")
+            );
+        }
+        let text = response.text().await.unwrap();
+        assert!(text.contains(expected), "{path} lacks {expected:?}");
+        panel_html.push_str(&text);
+    }
+    assert!(panel_html.contains("Zalogowane sesje</span><strong>1</strong>"));
+    // Bladephoriafonk's main invite is dead in the mock: the panel says so.
+    assert!(panel_html.contains("zapasowe"));
+    let foreign = client
+        .get(format!("{panel}/"))
+        .header("host", "evil.example")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(foreign.status(), 403);
+    foreign.bytes().await.unwrap();
+    assert_eq!(status(format!("{base}/logs")).await, 404);
+    assert_eq!(status(format!("{base}/data")).await, 404);
+
     // Graceful stop writes the final summary.
     let pid = server.0.id().to_string();
     assert!(
@@ -400,6 +442,12 @@ async fn diagnostics_record_everything_and_no_secrets() {
         state.as_str(),
         session_id.as_str(),
     ];
+    for secret in secrets {
+        assert!(
+            !panel_html.contains(secret),
+            "the admin panel shows a secret"
+        );
+    }
     for entry in fs::read_dir(&diagnostics_dir).unwrap().flatten() {
         let content = fs::read_to_string(entry.path()).unwrap();
         for secret in secrets {

@@ -70,6 +70,13 @@ pub struct App {
 
 pub type SharedApp = Arc<App>;
 
+pub struct PanelState {
+    pub sessions: usize,
+    pub login_states: usize,
+    /// Primary invite code, fetch time and payload of each cached server.
+    pub invites: Vec<(String, i64, Map<String, Value>)>,
+}
+
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
@@ -94,6 +101,19 @@ impl App {
             sessions: lock(&self.sessions).len(),
             login_states: lock(&self.states).len(),
             invite_cache: lock(&self.invite_cache).len(),
+        }
+    }
+
+    /// What the admin panel shows: counts and the cached server data, never
+    /// session ids or tokens.
+    pub fn panel_state(&self) -> PanelState {
+        PanelState {
+            sessions: lock(&self.sessions).len(),
+            login_states: lock(&self.states).len(),
+            invites: lock(&self.invite_cache)
+                .iter()
+                .map(|(key, entry)| ((*key).to_owned(), entry.fetched_at, entry.payload.clone()))
+                .collect(),
         }
     }
 
@@ -352,7 +372,7 @@ fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
     found.filter(|value| !value.is_empty())
 }
 
-fn query_param(query: Option<&str>, name: &str) -> Option<String> {
+pub fn query_param(query: Option<&str>, name: &str) -> Option<String> {
     url::form_urlencoded::parse(query?.as_bytes())
         .find(|(key, _)| key == name)
         .map(|(_, value)| value.into_owned())

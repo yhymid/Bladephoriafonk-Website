@@ -115,6 +115,29 @@ strukturę (np. ucięty do `{}`), serwer:
 `<plik>.bak` jest dobra, podaje polecenie `cp`, które ją przywraca. `STRICT_DATA_FILES=0`
 przywraca dawne, luźne zachowanie.
 
+## Panel admina
+
+Panel tylko do odczytu na osobnym porcie, nasłuchuje wyłącznie na `127.0.0.1` VPS i jest
+dostępny przez tunel SSH; nginx nigdy go nie wystawia. Ustaw `ADMIN_PANEL_PORT` (na
+produkcji 3002, `0` = wyłączony) i otwórz go tak:
+
+```bash
+scripts/admin-tunnel.sh            # potem http://127.0.0.1:3002, Ctrl+C zamyka tunel
+```
+
+| Strona | Co pokazuje |
+|---|---|
+| Przegląd | wersję i commit, czas działania, pamięć, sesje i logowania w toku, które zaproszenie Discord działa dla każdego serwera (główne czy zapasowe), dzisiejsze wskazówki i anomalie |
+| Diagnostyka | raporty dzienne w czytelnej postaci |
+| Dane | pliki danych z rozmiarem, czasem zmiany i poprawnością, kopie `.bak` / `.corrupt-*`, ostatnie wpisy changeloga, profile |
+| Logi | ostatnie 300 linii logu usługi od najnowszych, filtr „ostrzeżenia i błędy”, wyszukiwarka |
+
+Bez JavaScriptu, bez formularzy, które cokolwiek zmieniają, ze ścisłym CSP. Żądania muszą
+być adresowane do `127.0.0.1`, `localhost` albo `[::1]` (dowolny port), co blokuje DNS
+rebinding. Identyfikatory sesji i tokeny nigdy nie są pokazywane; linie logów są maskowane
+(sekret klienta i każdy token od 32 znaków). Logi pochodzą z `journalctl` bez sudo
+(użytkownik usługi jest w grupie `adm`).
+
 ## Endpointy
 
 - `GET /health`

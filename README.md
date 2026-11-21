@@ -113,6 +113,28 @@ structure (for example truncated to `{}`), the server:
 `<file>.bak` is fine, prints the `cp` command that restores it. `STRICT_DATA_FILES=0` brings
 back the old lenient behaviour.
 
+## Admin panel
+
+A read-only panel on a separate port, bound to `127.0.0.1` of the VPS only and reached
+through an SSH tunnel; nginx never exposes it. Set `ADMIN_PANEL_PORT` (3002 on production,
+`0` = off) and open it with:
+
+```bash
+scripts/admin-tunnel.sh            # then http://127.0.0.1:3002, Ctrl+C closes the tunnel
+```
+
+| Page | What it shows |
+|---|---|
+| Overview | version and commit, uptime, memory, sessions and pending logins, which Discord invite works for each server (main or a backup code), today's hints and anomalies |
+| Diagnostics | the daily reports, rendered |
+| Data | the data files with size, time and whether they are valid, `.bak` / `.corrupt-*` copies, the latest changelog posts, the profiles |
+| Logs | the last 300 lines of the service log, newest first, a warnings-and-errors filter and search |
+
+No JavaScript, no forms that change anything, a strict CSP. Requests must be addressed to
+`127.0.0.1`, `localhost` or `[::1]` (any port), which blocks DNS rebinding. Session ids and
+tokens are never shown; log lines are masked (the client secret and any 32+ character token).
+The logs come from `journalctl` without sudo (the service user is in the `adm` group).
+
 ## Endpoints
 
 - `GET /health`
