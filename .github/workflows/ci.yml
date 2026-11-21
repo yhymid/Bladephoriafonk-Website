@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  rust:
+    name: fmt, clippy, test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install stable toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+          rustup default stable
+          rustc --version
+      - run: cargo fmt --all --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      # Unit tests and the end-to-end test (real binary, fake Discord, no network).
+      - run: cargo test --locked
+      - run: cargo build --locked --release
+      - name: Check the example configuration
+        run: |
+          data="$RUNNER_TEMP/bladephoria"
+          mkdir -p "$data"
+          # The example with local paths and placeholder Discord settings.
+          sed -e "s|/var/lib/bladephoria|$data|" \
+              -e "s|/home/ubuntu/Main Files/Website|$GITHUB_WORKSPACE|" \
+              -e "s|^DISCORD_CLIENT_ID=$|DISCORD_CLIENT_ID=123|" \
+              -e "s|^DISCORD_CLIENT_SECRET=$|DISCORD_CLIENT_SECRET=placeholder|" \
+              ../oauth/.env.example > "$data/.env"
+          ./target/release/bladephoria-web --version
+          ./target/release/bladephoria-web --check-config --env-file "$data/.env"
+      - name: Deploy script syntax
+        run: bash -n ../deploy/deploy.sh
+
+  msrv:
+    name: MSRV (rust-version from Cargo.toml)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install MSRV toolchain
+        run: |
+          msrv=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+          test -n "$msrv"
+          rustup toolchain install "$msrv" --profile minimal
+          echo "MSRV=$msrv" >> "$GITHUB_ENV"
+      - run: cargo +"$MSRV" check --locked --all-targets
+
+  docs:
+    name: Markdown links
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check-links.py

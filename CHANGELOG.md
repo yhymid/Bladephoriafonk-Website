@@ -13,6 +13,9 @@
   when it grows every day.
 - `bladephoria-web --check-config` validates the configuration and the data files without starting
   the server or writing anything; `--version` prints the version.
+- GitHub Actions CI: fmt, clippy, unit and end-to-end tests, release build, `--check-config` on
+  the example configuration, the MSRV (Rust 1.88) and a check of links between the Markdown
+  files (`scripts/check-links.py`). Actions are pinned to commit SHAs.
 
 ### Changed
 - `deploy/deploy.sh` builds in `~/src/Bladephoriafonk-Website`, keeps only the files the server
