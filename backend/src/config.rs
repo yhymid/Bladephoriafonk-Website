@@ -32,6 +32,9 @@ pub struct Config {
     pub invite_cache_ttl_ms: i64,
     /// Most login attempts kept while waiting for Discord; 0 = no limit.
     pub max_pending_logins: usize,
+    /// Refuse data files with the wrong structure instead of treating them
+    /// as empty (which would overwrite them on the next save).
+    pub strict_data_files: bool,
     pub json_body_limit: usize,
     pub changelog_json_body_limit: usize,
 
@@ -204,6 +207,12 @@ impl Config {
             session_data_ttl_ms: env.number("SESSION_DATA_TTL_MS", 5 * 60 * 1000),
             invite_cache_ttl_ms: env.number("INVITE_CACHE_TTL_MS", 60 * 1000),
             max_pending_logins: env.number("MAX_PENDING_LOGINS", 10_000),
+            strict_data_files: env.get("STRICT_DATA_FILES").is_none_or(|value| {
+                !matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "0" | "false" | "no" | "off"
+                )
+            }),
             json_body_limit: env.number("JSON_BODY_LIMIT_BYTES", 8 * 1024 * 1024),
             changelog_json_body_limit: env
                 .number("CHANGELOG_JSON_BODY_LIMIT_BYTES", 32 * 1024 * 1024),

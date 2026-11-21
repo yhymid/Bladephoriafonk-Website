@@ -35,14 +35,85 @@ pub async fn read_json_file(path: &Path) -> Result<Option<Value>, Fail> {
     let parsed = if text.trim().is_empty() {
         Ok(None)
     } else {
-        serde_json::from_str(&text).map(Some).map_err(|_| {
-            let name = path.file_name().unwrap_or_default().to_string_lossy();
-            diagnostics::anomaly("invalid_json_file", name.to_string());
-            Fail(format!("invalid_json_file:{name}"))
-        })
+        serde_json::from_str(&text).map(Some).map_err(|_| ())
     };
     diagnostics::io("read", path, started.elapsed(), text.len(), parsed.is_ok());
-    parsed
+    match parsed {
+        Ok(value) => Ok(value),
+        Err(()) => Err(damaged(path, "invalid_json_file").await),
+    }
+}
+
+/// FNV-1a: a stable content hash for naming quarantine copies.
+fn fnv1a(bytes: &[u8]) -> u64 {
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+        (hash ^ u64::from(*byte)).wrapping_mul(0x0100_0000_01b3)
+    })
+}
+
+/// Keeps a copy of a damaged data file next to it as
+/// `<name>.corrupt-<hash>`, reports it and returns the error for callers.
+/// The original is left untouched (and is not overwritten, because every
+/// write first reads it successfully); the same content is copied once.
+async fn damaged(path: &Path, reason: &str) -> Fail {
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    let mut copy_note = String::new();
+    if let Ok(content) = fs::read(path).await {
+        let mut copy = path.as_os_str().to_owned();
+        copy.push(format!(".corrupt-{:016x}", fnv1a(&content)));
+        let copy = std::path::PathBuf::from(copy);
+        if !path_exists(&copy).await && fs::copy(path, &copy).await.is_ok() {
+            eprintln!(
+                "[data] {name} is damaged ({reason}), copy kept as {}",
+                copy.display()
+            );
+        }
+        copy_note = format!(
+            ", copy {}",
+            copy.file_name().unwrap_or_default().to_string_lossy()
+        );
+    }
+    diagnostics::anomaly_throttled(
+        "damaged_data_file",
+        &name,
+        format!("{name}: {reason}{copy_note}"),
+        std::time::Duration::from_secs(3600),
+    );
+    Fail(format!("{reason}:{name}"))
+}
+
+/// What is wrong with the structure of a data file, if anything.
+/// `kind` is "profiles" or "changelog".
+pub fn shape_problem(kind: &str, data: &Value) -> Option<&'static str> {
+    let field = match kind {
+        "profiles" => data.get("users").map(Value::is_object),
+        "changelog" => data.get("posts").map(Value::is_array),
+        _ => return None,
+    };
+    match (data.is_object(), field) {
+        (false, _) => Some("not_a_json_object"),
+        (true, None) => Some("missing_main_field"),
+        (true, Some(false)) => Some("wrong_main_field_type"),
+        (true, Some(true)) => None,
+    }
+}
+
+/// Reads a profiles or changelog file. In strict mode a file that exists
+/// but is blank or has the wrong structure is an error: treating it as
+/// empty would overwrite everything on the next save.
+async fn read_data_file(cfg: &Config, kind: &str, path: &Path) -> Result<Option<Value>, Fail> {
+    let data = read_json_file(path).await?;
+    if !cfg.strict_data_files {
+        return Ok(data);
+    }
+    match &data {
+        None if fs::metadata(path).await.is_ok() => Err(damaged(path, "blank_file").await),
+        Some(value) => match shape_problem(kind, value) {
+            Some(problem) => Err(damaged(path, problem).await),
+            None => Ok(data),
+        },
+        None => Ok(None),
+    }
 }
 
 /// Writes pretty JSON through a temp file + rename, keeping a `.bak` copy of
@@ -126,13 +197,15 @@ async fn write_private_json_inner(path: &Path, payload: &Value) -> Result<usize,
 pub type Users = Map<String, Value>;
 
 pub async fn read_profile_db(cfg: &Config) -> Result<Users, Fail> {
-    Ok(match read_json_file(&cfg.profile_db_file).await? {
-        Some(Value::Object(mut data)) => match data.remove("users") {
-            Some(Value::Object(users)) => users,
+    Ok(
+        match read_data_file(cfg, "profiles", &cfg.profile_db_file).await? {
+            Some(Value::Object(mut data)) => match data.remove("users") {
+                Some(Value::Object(users)) => users,
+                _ => Users::new(),
+            },
             _ => Users::new(),
         },
-        _ => Users::new(),
-    })
+    )
 }
 
 pub async fn write_profile_db(cfg: &Config, users: Users) -> Result<(), Fail> {
@@ -330,7 +403,7 @@ pub fn normalize_changelog_post(input: &Value) -> Option<Value> {
 }
 
 pub async fn read_changelog_posts(cfg: &Config) -> Result<Vec<Value>, Fail> {
-    let posts: Vec<Value> = match read_json_file(&cfg.changelog_db_file).await? {
+    let posts: Vec<Value> = match read_data_file(cfg, "changelog", &cfg.changelog_db_file).await? {
         Some(data) => data
             .get("posts")
             .and_then(Value::as_array)
@@ -381,7 +454,7 @@ pub async fn audit_data(cfg: &Config) -> (usize, usize, Vec<(&'static str, Strin
         Err(error) => issues.push(("unreadable_data_file", error.to_string())),
     }
 
-    match read_json_file(&cfg.changelog_db_file).await {
+    match read_data_file(cfg, "changelog", &cfg.changelog_db_file).await {
         Ok(Some(data)) => {
             let list = data
                 .get("posts")
@@ -437,6 +510,59 @@ pub async fn ensure_default_files(cfg: &Config) -> Result<(), Fail> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn strict_config(dir: &Path) -> Config {
+        let mut cfg = Config::load(None).unwrap();
+        cfg.profile_db_file = dir.join("profiles.json");
+        cfg.changelog_db_file = dir.join("changelog.json");
+        cfg.strict_data_files = true;
+        cfg
+    }
+
+    #[tokio::test]
+    async fn damaged_files_are_kept_and_never_overwritten() {
+        let dir = std::env::temp_dir().join(format!("bladephoria-damaged-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let cfg = strict_config(&dir);
+
+        // Truncated to an empty object: must not look like "no profiles".
+        std::fs::write(&cfg.profile_db_file, "{}").unwrap();
+        assert!(read_profile_db(&cfg).await.is_err());
+        let user = json!({ "id": "1", "username": "someone" });
+        assert!(upsert_profile(&cfg, &user).await.is_err());
+        assert_eq!(std::fs::read_to_string(&cfg.profile_db_file).unwrap(), "{}");
+
+        // Broken JSON: one copy per content, however often it is read.
+        std::fs::write(&cfg.changelog_db_file, "{\"posts\": [").unwrap();
+        for _ in 0..3 {
+            assert!(read_changelog_posts(&cfg).await.is_err());
+        }
+        let copies = |prefix: &str| {
+            std::fs::read_dir(&dir)
+                .unwrap()
+                .flatten()
+                .filter(|entry| {
+                    let name = entry.file_name().to_string_lossy().into_owned();
+                    name.starts_with(prefix) && name.contains(".corrupt-")
+                })
+                .count()
+        };
+        assert_eq!(copies("changelog.json"), 1);
+        assert_eq!(copies("profiles.json"), 1);
+
+        // Blank file in strict mode, accepted when strict mode is off.
+        std::fs::write(&cfg.profile_db_file, "").unwrap();
+        assert!(read_profile_db(&cfg).await.is_err());
+        let mut lenient = strict_config(&dir);
+        lenient.strict_data_files = false;
+        assert!(read_profile_db(&lenient).await.unwrap().is_empty());
+
+        // A good file reads normally.
+        std::fs::write(&cfg.profile_db_file, "{\"version\":1,\"users\":{}}").unwrap();
+        assert!(read_profile_db(&cfg).await.unwrap().is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn changelog_post_normalization() {

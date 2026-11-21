@@ -47,20 +47,42 @@ fn check_file(findings: &mut Vec<Finding>, what: &str, path: &Path, required: bo
 
 /// The file must be valid JSON when it exists (a missing one is created at
 /// start) and its directory must be writable.
-fn check_data_file(findings: &mut Vec<Finding>, what: &str, path: &Path) {
-    match std::fs::read_to_string(path) {
-        Ok(text) if text.trim().is_empty() => {
-            findings.push(finding(
-                Level::Ok,
-                format!("{what}: empty, {}", path.display()),
-            ));
+/// What is wrong with a data file: `None` when it is fine. `strict` makes
+/// blank files and a wrong structure errors, as the server treats them.
+fn data_problem(what: &str, text: &str, strict: bool) -> Option<String> {
+    if text.trim().is_empty() {
+        return strict.then(|| "file is blank".to_owned());
+    }
+    match serde_json::from_str::<Value>(text) {
+        Err(error) => Some(format!("not valid JSON ({error})")),
+        Ok(value) if strict => {
+            store::shape_problem(what, &value).map(|problem| format!("wrong structure ({problem})"))
         }
-        Ok(text) => findings.push(match serde_json::from_str::<Value>(&text) {
-            Ok(_) => finding(Level::Ok, format!("{what}: valid JSON, {}", path.display())),
-            Err(error) => finding(
-                Level::Error,
-                format!("{what} is not valid JSON ({error}): {}", path.display()),
-            ),
+        Ok(_) => None,
+    }
+}
+
+fn check_data_file(findings: &mut Vec<Finding>, what: &str, path: &Path, strict: bool) {
+    match std::fs::read_to_string(path) {
+        Ok(text) => findings.push(match data_problem(what, &text, strict) {
+            None => finding(Level::Ok, format!("{what}: valid, {}", path.display())),
+            Some(problem) => {
+                let mut backup = path.as_os_str().to_owned();
+                backup.push(".bak");
+                let backup = std::path::PathBuf::from(backup);
+                let hint = match std::fs::read_to_string(&backup) {
+                    Ok(saved) if data_problem(what, &saved, true).is_none() => format!(
+                        " - the previous version is fine: cp {} {}",
+                        backup.display(),
+                        path.display()
+                    ),
+                    _ => String::new(),
+                };
+                finding(
+                    Level::Error,
+                    format!("{what}: {problem}: {}{hint}", path.display()),
+                )
+            }
         }),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => findings.push(finding(
             Level::Warn,
@@ -161,9 +183,10 @@ pub async fn check_config(cfg: &Config) -> Vec<Finding> {
         )
     });
 
-    check_data_file(&mut findings, "profiles", &cfg.profile_db_file);
-    check_data_file(&mut findings, "changelog", &cfg.changelog_db_file);
-    check_data_file(&mut findings, "sessions", &cfg.session_db_file);
+    let strict = cfg.strict_data_files;
+    check_data_file(&mut findings, "profiles", &cfg.profile_db_file, strict);
+    check_data_file(&mut findings, "changelog", &cfg.changelog_db_file, strict);
+    check_data_file(&mut findings, "sessions", &cfg.session_db_file, false);
     if findings.iter().all(|found| found.level != Level::Error) {
         let (profiles, posts, issues) = store::audit_data(cfg).await;
         findings.push(finding(
@@ -211,10 +234,15 @@ mod tests {
         std::fs::write(&bad, "{\"users\":").unwrap();
 
         let mut findings = Vec::new();
-        check_data_file(&mut findings, "good", &good);
-        check_data_file(&mut findings, "bad", &bad);
-        check_data_file(&mut findings, "missing", &dir.join("missing.json"));
-        check_data_file(&mut findings, "nowhere", &dir.join("no-dir/file.json"));
+        check_data_file(&mut findings, "sessions", &good, false);
+        check_data_file(&mut findings, "sessions", &bad, false);
+        check_data_file(&mut findings, "sessions", &dir.join("missing.json"), false);
+        check_data_file(
+            &mut findings,
+            "sessions",
+            &dir.join("no-dir/file.json"),
+            false,
+        );
         let levels: Vec<&Level> = findings.iter().map(|found| &found.level).collect();
         assert_eq!(
             levels,
@@ -229,6 +257,41 @@ mod tests {
         // Nothing was created.
         assert!(!dir.join("missing.json").exists());
         assert!(!dir.join("no-dir").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn structure_problems_and_restore_hint() {
+        let dir = std::env::temp_dir().join(format!("bladephoria-shape-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("profiles.json");
+        std::fs::write(&file, "{}").unwrap();
+        std::fs::write(
+            dir.join("profiles.json.bak"),
+            "{\"version\":1,\"users\":{}}",
+        )
+        .unwrap();
+
+        let mut findings = Vec::new();
+        check_data_file(&mut findings, "profiles", &file, true);
+        assert_eq!(findings[0].level, Level::Error);
+        assert!(findings[0].text.contains("missing_main_field"));
+        assert!(findings[0].text.contains("cp "), "{}", findings[0].text);
+        // The lenient mode accepts it, like the old server did.
+        let mut lenient = Vec::new();
+        check_data_file(&mut lenient, "profiles", &file, false);
+        assert_eq!(lenient[0].level, Level::Ok);
+
+        assert_eq!(
+            data_problem("changelog", "{\"posts\":{}}", true).unwrap(),
+            "wrong structure (wrong_main_field_type)"
+        );
+        assert_eq!(
+            data_problem("changelog", "  ", true).unwrap(),
+            "file is blank"
+        );
+        assert!(data_problem("sessions", "{\"sessions\":{}}", true).is_none());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

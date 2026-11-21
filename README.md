@@ -126,6 +126,21 @@ tokenow, tresci zadan ani adresow IP - tylko etykiety tras (`/profile/:slug`,
 - `SESSION_DB_FILE` - zapisane sesje logowania (prawa 0600).
 - `MEDIA_ROOT` - katalog serwowany pod `/media/`.
 
+## Uszkodzone pliki danych
+
+Gdy `profiles.json` albo `changelog.json` nie jest poprawnym JSON-em, jest
+pusty albo ma zla strukture (np. uciety do `{}`), serwer:
+
+- nie traktuje go jak pustej bazy i nigdy go nie nadpisuje (logowanie
+  i dodawanie wpisow zwracaja blad zamiast skasowac dane),
+- zostawia obok kopie `<plik>.corrupt-<hash>` (jedna na dana zawartosc;
+  oryginal zostaje nietkniety),
+- zglasza anomalie `damaged_data_file` w diagnostyce.
+
+`bladephoria-web --check-config` pokazuje, co jest nie tak, i gdy poprzednia
+wersja `<plik>.bak` jest dobra, podaje polecenie `cp` do jej przywrocenia.
+`STRICT_DATA_FILES=0` przywraca dawne, luzne zachowanie.
+
 ## Uwagi
 
 - Sesje sa zapisywane do pliku, wiec restart backendu nie wylogowuje uzytkownikow.

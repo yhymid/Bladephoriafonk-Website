@@ -37,6 +37,11 @@
   only to `oauth/data/`, `diagnostics/` and `media/`, has no capabilities and creates files
   with mode 600. `systemd-analyze security` went from 9.2 (unsafe) to 1.6 (ok). Data and
   diagnostics files on the server are 600, their directories 700.
+- Damaged data files are never overwritten: a `profiles.json` or `changelog.json` that is blank,
+  not valid JSON or has the wrong structure (for example truncated to `{}`) is refused instead
+  of being treated as empty, a copy `<file>.corrupt-<hash>` is kept next to it and
+  `--check-config` shows how to restore the `.bak`. `STRICT_DATA_FILES=0` restores the old
+  behaviour.
 
 ### Removed
 - `assets/favicon.svg` from the repository (it stays on the server with the other uploads).
