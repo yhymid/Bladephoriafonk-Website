@@ -29,6 +29,10 @@
 - `README.md` moved from `oauth/` to the root of the repository.
 - `deploy/deploy.sh` runs `--check-config` with the new binary before anything on the server
   changes, and the configuration backup also holds `oauth/data/`.
+- Documentation in English and Polish: `README.md` / `README.pl.md` and `deploy/DEPLOY.md` /
+  `deploy/DEPLOY.pl.md`, with a table of every file on the server (who writes it, what it
+  holds, whether it can be deleted, what to back up). `oauth/.env.example` comments are in
+  English.
 
 ### Fixed
 - Diagnostics no longer count complete responses of streamed files (pages without compression)

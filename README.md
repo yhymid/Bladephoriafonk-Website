@@ -1,113 +1,122 @@
 # Bladephoriafonk Website
 
-Strona https://bladephoriafonk.xyz. Backend jest napisany w Ruscie i lezy w
-[`backend/`](backend). Jeden
-program (`bladephoria-web`) obsluguje:
+**English** · [Polski](README.pl.md)
 
-- strony i assety (`/`, `/server`, `/administracja`, `/changelog`, `/assets/`, `/profile/`, `/media/`),
-- logowanie Discord OAuth2,
-- profile `/profile/<slug>/` i tryb publiczny profilu,
-- changelog,
-- publiczne dane serwerow Discord pobierane po stronie backendu,
-- usuwanie opublikowanych mediow po tokenie.
+The website at https://bladephoriafonk.xyz. One small Rust program
+(`bladephoria-web`, source in [`backend/`](backend)) serves:
 
-Katalog `oauth/` trzyma tylko konfiguracje i dane: `.env` i `data/`.
+- the pages and assets (`/`, `/server`, `/administracja`, `/changelog`, `/assets/`, `/profile/`, `/media/`),
+- Discord OAuth2 login,
+- profiles at `/profile/<slug>/` with an optional public mode,
+- the changelog,
+- public data of the Discord servers, fetched by the backend,
+- deleting published media with its token.
 
-## Co jest wazne
+The `oauth/` directory only holds configuration and data: `.env` and `data/`.
 
-- `.env` i pliki w `data/` nie sa nigdy wystawiane publicznie.
-- Serwer nie wystawia `oauth/`, `backend/`, `deploy/` ani plikow zaczynajacych sie od kropki.
-- Wszystkie profile uzywaja jednego szablonu `profile/index.html`; zmiana szablonu dziala od razu dla kazdego profilu.
-- Sesje i publiczne dane serwerow sa cache'owane, zeby ograniczyc ruch do Discord API.
+## Documentation
 
-## Wymagane dane w `.env`
+| Document | What it covers |
+|---|---|
+| [deploy/DEPLOY.md](deploy/DEPLOY.md) | Deploying to the VPS, first install, every file on the server, checks |
+| [CHANGELOG.md](CHANGELOG.md) | Changes per version |
+| [oauth/.env.example](oauth/.env.example) | Every configuration variable |
 
-- `DISCORD_CLIENT_ID`
-- `DISCORD_CLIENT_SECRET`
-- `DISCORD_REDIRECT_URI`
-- `BASE_URL`
+## Good to know
 
-Domyslny redirect dla domeny:
+- `.env` and the files in `data/` are never public.
+- Only the pages, assets, media, profiles, `/auth/*` and `/health` are served; everything
+  else (`oauth/`, `diagnostics/`, the binary, files starting with a dot) gets the 404 page.
+- Every profile uses the one template `profile/index.html`; a change to it applies to all
+  profiles at once.
+- Sessions and the public server data are cached to keep traffic to the Discord API low.
+- Sessions are saved to a file, so a restart does not log anyone out.
+- A failed login returns to the page with `?oauth_error=<code>`; `site-lang.js` shows a message.
+- The Discord invites are ordered code lists in `backend/src/discord.rs`. When the first code
+  expires the backend uses the next one, and `/server` shows the working link by itself.
 
-- `https://bladephoriafonk.xyz/auth/discord/callback`
+## Configuration
 
-Pelna lista zmiennych: [oauth/.env.example](oauth/.env.example). Zmienne ustawione
-w srodowisku maja pierwszenstwo przed plikiem `--env-file`.
+Required in `.env`: `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`
+(for the domain: `https://bladephoriafonk.xyz/auth/discord/callback`) and `BASE_URL`.
+All variables: [oauth/.env.example](oauth/.env.example). Variables set in the environment
+win over the `--env-file` file.
 
-## Lokalne uruchomienie
-
-```bash
-cp oauth/.env.example oauth/.env   # uzupelnij dane Discorda, ustaw lokalne sciezki
-cd backend
-SITE_ROOT=.. PORT=8080 BASE_URL=http://127.0.0.1:8080 cargo run --release -- --env-file ../oauth/.env
-```
-
-Potem otworz:
-
-- `http://127.0.0.1:8080`
-
-Osobny serwer deweloperski nie jest juz potrzebny - ten sam program serwuje
-strony i API.
-
-Sprawdzenie konfiguracji bez uruchamiania serwera (niczego nie zapisuje,
-sekretow nie wypisuje, kod wyjscia 1 przy bledach):
+Check the configuration without starting the server (writes nothing, never prints secrets,
+exit code 1 on errors):
 
 ```bash
 cd backend
 cargo run --release -- --env-file ../oauth/.env --check-config
 ```
 
-Testy i kontrola kodu:
+## Running locally
+
+```bash
+cp oauth/.env.example oauth/.env   # fill in the Discord settings and local paths
+cd backend
+SITE_ROOT=.. PORT=8080 BASE_URL=http://127.0.0.1:8080 cargo run --release -- --env-file ../oauth/.env
+```
+
+Then open http://127.0.0.1:8080. The same program serves the pages and the API; no separate
+development server is needed.
+
+Tests and checks (CI runs the same on every push):
 
 ```bash
 cd backend
-cargo test            # testy jednostkowe + e2e (prawdziwa binarka i atrapa Discorda)
-BLADEPHORIA_UPDATE_SNAPSHOTS=1 cargo test   # odswieza oczekiwane wyniki w tests/fixtures/discord/
+cargo test                                   # unit tests + e2e (real binary, fake Discord)
+BLADEPHORIA_UPDATE_SNAPSHOTS=1 cargo test    # refresh the expected files in tests/fixtures/discord/
 cargo clippy --all-targets -- -D warnings
+python3 ../scripts/check-links.py            # links between the Markdown files
 ```
 
-## Wdrozenie na VPS
+## Diagnostics
 
-Opis: [deploy/DEPLOY.md](deploy/DEPLOY.md). Przyklady:
+Switched on in `.env` with `BLADEPHORIA_DIAGNOSTICS=1`. The server then writes to
+`diagnostics/` (next to `index.html`; not public):
 
-- [deploy/nginx-site.conf.example](deploy/nginx-site.conf.example)
-- [deploy/bladephoria-oauth.service.example](deploy/bladephoria-oauth.service.example)
+- `events-YYYY-MM-DD.jsonl`: one JSON line per event, times in ms:
+  `http` (route, status, TTFB, total and send time, size, compression, time spent in Discord /
+  files / locks), `discord` (endpoint, status, time, rate-limit headers), `io` (data file reads
+  and writes), `lock`, `tick` (delay of periodic tasks), `resources` (every minute: memory,
+  CPU, threads, file descriptors, event-loop lag, sessions), `anomaly` (expired invite, 429,
+  bad JSON, clock skew, failed login, damaged data file) and `lifecycle` (start, stop, data audit);
+- `summary-YYYY-MM-DD.md`: a report in Polish, refreshed every 15 minutes and on shutdown:
+  p50/p90/p99 per route, where the time goes, the slowest requests, Discord API, files,
+  resources (with the memory of the last 7 days), anomalies and hints.
 
-## Diagnostyka
+Days are UTC. A separate thread writes through a bounded queue, so recording never slows a
+response down (a full queue counts the event as dropped). No secrets are recorded: no query
+strings, cookies, tokens, request bodies or IP addresses, only route labels (`/profile/:slug`,
+`/media/*`, `(404)`), times, sizes and counters.
 
-Wlaczana w `.env`: `BLADEPHORIA_DIAGNOSTICS=1`. Serwer zapisuje wtedy do
-`diagnostics/` (obok `index.html`; katalog nie jest publiczny):
-
-- `events-YYYY-MM-DD.jsonl` - kazde zdarzenie w osobnej linii JSON, czas w ms:
-  `http` (trasa, status, TTFB, czas calosci i wysylki, rozmiar, kompresja,
-  ile czasu zajal Discord / pliki / blokady), `discord` (endpoint, status,
-  czas, naglowki rate limit), `io` (odczyt/zapis plikow danych), `lock`,
-  `tick` (spoznienie zadan okresowych), `resources` (co minute: RAM, CPU,
-  watki, deskryptory, opoznienie petli zdarzen, liczba sesji), `anomaly`
-  (np. wygasle zaproszenie, 429, zly JSON, przesuniecie zegara, nieudane
-  logowanie) i `lifecycle` (start, stop, audyt danych);
-- `summary-YYYY-MM-DD.md` - raport po polsku odswiezany co 15 minut i przy
-  zamknieciu: p50/p90/p99 dla kazdej trasy, gdzie idzie czas, najwolniejsze
-  zadania, Discord API, pliki, zasoby, anomalie i automatyczne wskazowki.
-
-Doba liczona w UTC. Zapis idzie przez osobny watek i ograniczona kolejke, wiec
-nigdy nie spowalnia odpowiedzi (przy przepelnieniu zdarzenie jest liczone jako
-pominiete). Pliki nie zawieraja sekretow: zadnych query stringow, ciasteczek,
-tokenow, tresci zadan ani adresow IP - tylko etykiety tras (`/profile/:slug`,
-`/media/*`, `(404)`), czasy, rozmiary i liczniki.
-
-| Zmienna | Domyslnie | Znaczenie |
+| Variable | Default | Meaning |
 |---|---|---|
-| `BLADEPHORIA_DIAGNOSTICS` | wylaczone | `1` wlacza |
-| `BLADEPHORIA_DIAGNOSTICS_DIR` | `SITE_ROOT/diagnostics` | katalog plikow |
-| `BLADEPHORIA_DIAGNOSTICS_RETENTION_DAYS` | `14` | po ilu dniach pliki sa usuwane |
-| `BLADEPHORIA_DIAGNOSTICS_MAX_MB` | `50` | limit pliku zdarzen na dzien |
-| `BLADEPHORIA_DIAGNOSTICS_SUMMARY_MINUTES` | `15` | co ile minut raport |
+| `BLADEPHORIA_DIAGNOSTICS` | off | `1` switches it on |
+| `BLADEPHORIA_DIAGNOSTICS_DIR` | `SITE_ROOT/diagnostics` | directory |
+| `BLADEPHORIA_DIAGNOSTICS_RETENTION_DAYS` | `14` | files older than this are deleted |
+| `BLADEPHORIA_DIAGNOSTICS_MAX_MB` | `50` | size limit of one day's event file |
+| `BLADEPHORIA_DIAGNOSTICS_SUMMARY_MINUTES` | `15` | report interval |
 
-## Endpointy
+## Damaged data files
+
+When `profiles.json` or `changelog.json` is not valid JSON, is blank or has the wrong
+structure (for example truncated to `{}`), the server:
+
+- does not treat it as an empty database and never overwrites it (logins and new posts fail
+  instead of wiping the data),
+- keeps a copy `<file>.corrupt-<hash>` next to it (one per content; the original is untouched),
+- reports a `damaged_data_file` anomaly in the diagnostics.
+
+`bladephoria-web --check-config` shows what is wrong and, when the previous version
+`<file>.bak` is fine, prints the `cp` command that restores it. `STRICT_DATA_FILES=0` brings
+back the old lenient behaviour.
+
+## Endpoints
 
 - `GET /health`
-- `GET /auth/discord/login?return_to=<sciezka>`
+- `GET /auth/discord/login?return_to=<path>`
 - `GET /auth/discord/callback`
 - `GET /auth/session`
 - `GET /auth/public-profile?slug=<slug>`
@@ -118,33 +127,3 @@ tokenow, tresci zadan ani adresow IP - tylko etykiety tras (`/profile/:slug`,
 - `POST /auth/changelog`
 - `GET /auth/server-data`
 - `POST /auth/media-delete`
-
-## Dane i pliki
-
-- `PROFILE_TEMPLATE_FILE` - szablon profilu (domyslnie `profile/index.html`), podawany pod `/profile/<slug>/` dla istniejacych profili.
-- `PROFILE_DB_FILE` - profile i ustawienia publiczne.
-- `CHANGELOG_DB_FILE` - wpisy changeloga.
-- `SESSION_DB_FILE` - zapisane sesje logowania (prawa 0600).
-- `MEDIA_ROOT` - katalog serwowany pod `/media/`.
-
-## Uszkodzone pliki danych
-
-Gdy `profiles.json` albo `changelog.json` nie jest poprawnym JSON-em, jest
-pusty albo ma zla strukture (np. uciety do `{}`), serwer:
-
-- nie traktuje go jak pustej bazy i nigdy go nie nadpisuje (logowanie
-  i dodawanie wpisow zwracaja blad zamiast skasowac dane),
-- zostawia obok kopie `<plik>.corrupt-<hash>` (jedna na dana zawartosc;
-  oryginal zostaje nietkniety),
-- zglasza anomalie `damaged_data_file` w diagnostyce.
-
-`bladephoria-web --check-config` pokazuje, co jest nie tak, i gdy poprzednia
-wersja `<plik>.bak` jest dobra, podaje polecenie `cp` do jej przywrocenia.
-`STRICT_DATA_FILES=0` przywraca dawne, luzne zachowanie.
-
-## Uwagi
-
-- Sesje sa zapisywane do pliku, wiec restart backendu nie wylogowuje uzytkownikow.
-- Nieudane logowanie wraca na strone z `?oauth_error=<kod>`; `site-lang.js` pokazuje wtedy komunikat.
-- Zaproszenia Discord sa w `backend/src/discord.rs` (lista kodow w kolejnosci). Gdy pierwszy kod wygasnie, backend bierze nastepny, a strona `/server` sama pokazuje dzialajacy link.
-- `GET /auth/server-data` korzysta z cache, a reczny refresh na froncie moze wymusic odswiezenie.
