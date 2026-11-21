@@ -234,7 +234,13 @@ async fn diagnostics_record_everything_and_no_secrets() {
 
     let status = |url: String| {
         let client = client.clone();
-        async move { client.get(url).send().await.unwrap().status().as_u16() }
+        async move {
+            let response = client.get(url).send().await.unwrap();
+            let status = response.status().as_u16();
+            // Read the body to the end, like a browser would.
+            response.bytes().await.unwrap();
+            status
+        }
     };
     assert_eq!(status(format!("{base}/")).await, 200);
     assert_eq!(status(format!("{base}/nope")).await, 404);
@@ -310,6 +316,7 @@ async fn diagnostics_record_everything_and_no_secrets() {
         .await
         .unwrap();
     assert_eq!(created.status(), 201);
+    created.bytes().await.unwrap();
     assert_eq!(status(format!("{base}/profile/{slug}/")).await, 200);
 
     // Graceful stop writes the final summary.
@@ -340,6 +347,11 @@ async fn diagnostics_record_everything_and_no_secrets() {
             http_events += 1;
             let route = event["route"].as_str().unwrap();
             assert!(!route.contains('?'), "query string recorded: {route}");
+            // Every response here is read to the end by the client.
+            assert_eq!(
+                event["aborted"], false,
+                "complete response marked aborted: {line}"
+            );
             assert!(event["total_ms"].as_f64().unwrap() >= event["ttfb_ms"].as_f64().unwrap());
         }
         if kind == "anomaly" {

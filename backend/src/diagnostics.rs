@@ -29,7 +29,7 @@ use std::time::{Duration, Instant};
 
 use axum::body::{Body, Bytes};
 use axum::extract::Request;
-use axum::http::header::{ACCEPT_ENCODING, CONTENT_ENCODING, CONTENT_TYPE};
+use axum::http::header::{ACCEPT_ENCODING, CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE};
 use axum::middleware::Next;
 use axum::response::Response;
 use http_body::{Body as HttpBody, Frame, SizeHint};
@@ -466,6 +466,10 @@ pub async fn track_requests(request: Request, next: Next) -> Response {
     let ttfb = started.elapsed();
 
     let headers = response.headers();
+    let content_length = headers
+        .get(CONTENT_LENGTH)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u64>().ok());
     let encoding = match headers
         .get(CONTENT_ENCODING)
         .and_then(|value| value.to_str().ok())
@@ -497,7 +501,8 @@ pub async fn track_requests(request: Request, next: Next) -> Response {
     };
     response.map(|body| {
         Body::new(MeteredBody {
-            expected: body.size_hint().exact(),
+            // Streamed files have no exact size hint, but a Content-Length.
+            expected: body.size_hint().exact().or(content_length),
             inner: body,
             bytes: 0,
             ended: false,
@@ -757,6 +762,41 @@ struct Writer {
     stats: Stats,
     window: Stats,
     window_from_ms: i64,
+    /// RSS at the end of each earlier day still on disk, oldest first.
+    rss_history: Vec<(String, f64)>,
+}
+
+/// RSS of the last resource sample in an event file.
+fn last_rss_kb(path: &Path) -> Option<f64> {
+    let file = File::open(path).ok()?;
+    let mut last = None;
+    for line in BufReader::new(file).lines().map_while(Result::ok) {
+        if !line.contains("\"kind\":\"resources\"") {
+            continue;
+        }
+        if let Some(rss) = serde_json::from_str::<Value>(&line)
+            .ok()
+            .and_then(|event| event.get("rss_kb").and_then(Value::as_f64))
+        {
+            last = Some(rss);
+        }
+    }
+    last
+}
+
+/// End-of-day RSS of up to 7 days before `today`.
+fn rss_history(dir: &Path, today: &str) -> Vec<(String, f64)> {
+    let Some(today_ms) = parse_iso_ms(today) else {
+        return Vec::new();
+    };
+    (1..=7)
+        .rev()
+        .filter_map(|days_back| {
+            let day = day_of(today_ms - days_back * 86_400_000);
+            let rss = last_rss_kb(&dir.join(format!("events-{day}.jsonl")))?;
+            Some((day, rss))
+        })
+        .collect()
 }
 
 impl Writer {
@@ -772,6 +812,7 @@ impl Writer {
             stats: Stats::default(),
             window: Stats::default(),
             window_from_ms: now_ms(),
+            rss_history: Vec::new(),
         }
     }
 
@@ -839,6 +880,7 @@ impl Writer {
             .ok()
             .map(BufWriter::new);
         prune(&self.cfg.dir, self.cfg.retention_days, day);
+        self.rss_history = rss_history(&self.cfg.dir, day);
     }
 
     fn handle(&mut self, event: Value) {
@@ -911,6 +953,7 @@ impl Writer {
             suppressed: self.suppressed,
             final_report,
             cfg: &self.cfg,
+            rss_history: &self.rss_history,
         });
         let path = self.cfg.dir.join(format!("summary-{}.md", self.day));
         let temp = self.cfg.dir.join(format!(".summary-{}.md.tmp", self.day));
@@ -1255,6 +1298,7 @@ struct Report<'a> {
     suppressed: u64,
     final_report: bool,
     cfg: &'a DiagConfig,
+    rss_history: &'a [(String, f64)],
 }
 
 fn fmt_ms(value: f64) -> String {
@@ -1592,6 +1636,14 @@ fn render_summary(report: &Report<'_>) -> String {
                 fmt_bytes(resources.rss_max_kb * 1024.0),
                 fmt_bytes(resources.first_rss_kb.unwrap_or(0.0) * 1024.0)
             );
+            if !report.rss_history.is_empty() {
+                let days: Vec<String> = report
+                    .rss_history
+                    .iter()
+                    .map(|(day, rss)| format!("{} {}", &day[5..], fmt_bytes(rss * 1024.0)))
+                    .collect();
+                let _ = writeln!(out, "- RAM na koniec poprzednich dni: {}", days.join(", "));
+            }
             let _ = writeln!(
                 out,
                 "- CPU: średnio {:.2}% jednego rdzenia, łącznie {:.1} s od startu procesu",
@@ -1657,6 +1709,27 @@ fn render_summary(report: &Report<'_>) -> String {
         }
     }
     out
+}
+
+/// Memory that grows every day for at least four days and by over half
+/// since the oldest of them looks like a leak rather than warm caches.
+fn rss_trend_hint(history: &[(String, f64)], last: Option<&Value>) -> Option<String> {
+    let now = last?.get("rss_kb").and_then(Value::as_f64)?;
+    let mut values: Vec<f64> = history.iter().map(|(_, rss)| *rss).collect();
+    values.push(now);
+    if values.len() < 5 {
+        return None;
+    }
+    let rising = values.windows(2).all(|pair| pair[1] > pair[0]);
+    let first = values[0];
+    (rising && now > first * 1.5 && now - first > 10.0 * 1024.0).then(|| {
+        format!(
+            "RAM rośnie codziennie od {} dni: {} → {} — możliwy wyciek, sprawdź liczbę sesji i cache w sekcji Zasoby.",
+            values.len() - 1,
+            fmt_bytes(first * 1024.0),
+            fmt_bytes(now * 1024.0)
+        )
+    })
 }
 
 /// Automatic advice derived from the day's numbers.
@@ -1787,6 +1860,10 @@ fn hints(report: &Report<'_>) -> Vec<String> {
             fmt_bytes(first * 1024.0),
             fmt_bytes(last * 1024.0)
         ));
+    }
+
+    if let Some(hint) = rss_trend_hint(report.rss_history, resources.last.as_ref()) {
+        hints.push(hint);
     }
 
     for (name, entry) in &stats.anomalies {
@@ -2085,6 +2162,41 @@ mod tests {
     }
 
     #[test]
+    fn memory_trend_needs_steady_growth() {
+        let day = |rss: f64| (String::new(), rss);
+        let last = json!({ "rss_kb": 30_000.0 });
+        let growing = [day(8_000.0), day(12_000.0), day(16_000.0), day(20_000.0)];
+        assert!(rss_trend_hint(&growing, Some(&last)).is_some());
+        let dip = [day(8_000.0), day(12_000.0), day(11_000.0), day(20_000.0)];
+        assert!(rss_trend_hint(&dip, Some(&last)).is_none());
+        assert!(rss_trend_hint(&growing[1..], Some(&last)).is_none());
+        // Real production numbers of 2026-11-17..21: +25 %, not a leak yet.
+        let production = [day(14_524.0), day(15_368.0), day(15_916.0), day(17_472.0)];
+        assert!(rss_trend_hint(&production, Some(&json!({ "rss_kb": 18_168.0 }))).is_none());
+    }
+
+    #[test]
+    fn history_reads_the_last_sample_of_earlier_days() {
+        let dir = temp_dir("history");
+        let sample = |rss: u64| format!("{{\"kind\":\"resources\",\"rss_kb\":{rss}}}\n");
+        fs::write(
+            dir.join("events-2026-11-19.jsonl"),
+            sample(100) + "{\"kind\":\"http\"}\n" + &sample(150),
+        )
+        .unwrap();
+        fs::write(dir.join("events-2026-11-20.jsonl"), sample(200)).unwrap();
+        fs::write(dir.join("events-2026-11-21.jsonl"), sample(999)).unwrap();
+        assert_eq!(
+            rss_history(&dir, "2026-11-21"),
+            [
+                ("2026-11-19".to_owned(), 150.0),
+                ("2026-11-20".to_owned(), 200.0)
+            ]
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn quiet_day_has_no_hints() {
         let dir = temp_dir("quiet");
         let cfg = config(&dir);
@@ -2105,6 +2217,7 @@ mod tests {
             suppressed: 0,
             final_report: true,
             cfg: &cfg,
+            rss_history: &[],
         };
         assert!(hints(&report).is_empty());
         assert!(render_summary(&report).contains("Brak uwag"));

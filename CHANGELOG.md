@@ -9,6 +9,8 @@
   and hints is written to `diagnostics/summary-<day>.md` every 15 minutes. No secrets are
   recorded. Old files are removed after 14 days.
 - An end-to-end test that runs the real server against a fake Discord API.
+- The diagnostics report shows the memory used at the end of each of the last 7 days and warns
+  when it grows every day.
 
 ### Changed
 - `deploy/deploy.sh` builds in `~/src/Bladephoriafonk-Website`, keeps only the files the server
@@ -16,6 +18,10 @@
   `~/backups/` before every swap and uses the `operator_vps` SSH key.
 - The server binary lives in the site directory (`bladephoria-web`).
 - `README.md` moved from `oauth/` to the root of the repository.
+
+### Fixed
+- Diagnostics no longer count complete responses of streamed files (pages without compression)
+  as aborted.
 
 ### Removed
 - `assets/favicon.svg` from the repository (it stays on the server with the other uploads).
