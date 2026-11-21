@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Deploys the committed HEAD of this repository to the VPS:
-# upload -> build -> check config -> backup -> install -> restart -> health
-# check, with
-# rollback of the binary when the new one does not answer.
+# binary -> upload -> check config -> backup -> install -> restart -> health
+# check, with rollback of the binary when the new one does not answer.
+#
+# The binary comes from CI by default: the release build of the CI run for
+# exactly this commit (artifact `bladephoria-web-linux`, checked by SHA256
+# and glibc version), so the VPS does not compile next to the game servers.
+# BPF_BUILD=vps builds on the VPS instead, as before.
 #
 #   deploy/deploy.sh
 #
 # Layout on the VPS:
-#   ~/src/Bladephoriafonk-Website   build copy of the repo (+ backend/target)
+#   ~/src/Bladephoriafonk-Website   copy of the repo (+ backend/target when
+#                                   built on the VPS)
 #   SITE_DIR                        only what the server needs: the binary
 #                                   `bladephoria-web`, pages, assets/, media/,
 #                                   profile/, oauth/.env + oauth/data/,
@@ -20,6 +25,7 @@
 #   BPF_DEPLOY_SSH   ssh target            (default: ubuntu@57.128.222.44)
 #   BPF_DEPLOY_KEY   ssh private key       (default: ~/.ssh/operator_vps)
 #   BPF_DEPLOY_DIR   site directory on VPS (default: /home/ubuntu/Main Files/Website)
+#   BPF_BUILD        ci (default) or vps
 #
 # Never touched on the server: oauth/.env, oauth/data/, media/, diagnostics/
 # and anything in assets/ (modpack uploads live there).
@@ -28,6 +34,8 @@ set -euo pipefail
 TARGET="${BPF_DEPLOY_SSH:-ubuntu@57.128.222.44}"
 SITE_DIR="${BPF_DEPLOY_DIR:-/home/ubuntu/Main Files/Website}"
 KEY="${BPF_DEPLOY_KEY:-$HOME/.ssh/operator_vps}"
+BUILD_MODE="${BPF_BUILD:-ci}"
+case "$BUILD_MODE" in ci|vps) ;; *) echo "BPF_BUILD must be ci or vps" >&2; exit 1 ;; esac
 
 SSH=(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
 if [ -f "$KEY" ]; then SSH+=(-i "$KEY" -o IdentitiesOnly=yes); fi
@@ -37,7 +45,40 @@ if [ -n "$(git status --porcelain)" ]; then
   echo "!! Uncommitted changes are NOT deployed (only the committed HEAD is)." >&2
 fi
 NEW_COMMIT=$(git rev-parse HEAD)
-echo "== deploying $(git log -1 --format='%h %s')"
+echo "== deploying $(git log -1 --format='%h %s') (binary: $BUILD_MODE)"
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+if [ "$BUILD_MODE" = ci ]; then
+  repo=$(git remote get-url origin | sed -E 's#^(https://github.com/|git@github.com:)##; s#\.git$##')
+  git fetch -q origin
+  if [ -z "$(git branch -r --contains "$NEW_COMMIT")" ]; then
+    echo "!! $NEW_COMMIT is not pushed; CI builds only pushed commits (or use BPF_BUILD=vps)" >&2
+    exit 1
+  fi
+  echo "== waiting for CI of ${NEW_COMMIT:0:7} ($repo)"
+  run=""
+  for _ in $(seq 30); do
+    run=$(gh run list --repo "$repo" --commit "$NEW_COMMIT" --workflow ci.yml \
+      --json databaseId --jq '.[0].databaseId // empty')
+    [ -n "$run" ] && break
+    sleep 10
+  done
+  [ -n "$run" ] || { echo "!! no CI run for $NEW_COMMIT" >&2; exit 1; }
+  if ! gh run watch "$run" --repo "$repo" --exit-status > /dev/null; then
+    echo "!! CI run $run failed - nothing deployed" >&2
+    exit 1
+  fi
+  gh run download "$run" --repo "$repo" -n bladephoria-web-linux -D "$WORK"
+  (cd "$WORK" && sha256sum --quiet -c SHA256SUMS)
+  need=$(cat "$WORK/GLIBC_REQUIRED")
+  have=$("${SSH[@]}" "$TARGET" "ldd --version | head -1 | grep -oE '[0-9]+\.[0-9]+\$'")
+  if [ "$(printf '%s\n%s\n' "$need" "$have" | sort -V | head -1)" != "$need" ]; then
+    echo "!! the binary needs glibc $need, the VPS has $have (use BPF_BUILD=vps)" >&2
+    exit 1
+  fi
+  echo "binary from CI run $run: sha256 $(cut -c1-16 "$WORK/SHA256SUMS" | head -1)..., glibc $need <= $have"
+fi
 
 echo "== upload"
 # The build copy mirrors HEAD exactly; only the cargo cache survives.
@@ -47,9 +88,13 @@ echo "== upload"
   find "$BUILD" -mindepth 1 -maxdepth 1 ! -name backend -exec rm -rf {} +
   find "$BUILD/backend" -mindepth 1 -maxdepth 1 ! -name target -exec rm -rf {} +'
 git archive HEAD | "${SSH[@]}" "$TARGET" 'tar -x -C "$HOME/src/Bladephoriafonk-Website"'
+if [ "$BUILD_MODE" = ci ]; then
+  tar -C "$WORK" -cf - bladephoria-web SHA256SUMS GLIBC_REQUIRED \
+    | "${SSH[@]}" "$TARGET" 'mkdir -p "$HOME/src/Bladephoriafonk-Website/ci" && tar -x -C "$HOME/src/Bladephoriafonk-Website/ci"'
+fi
 
 echo "== build, install, restart, check"
-"${SSH[@]}" "$TARGET" "SITE_DIR='$SITE_DIR' NEW_COMMIT='$NEW_COMMIT' bash -s" <<'REMOTE'
+"${SSH[@]}" "$TARGET" "SITE_DIR='$SITE_DIR' NEW_COMMIT='$NEW_COMMIT' BUILD_MODE='$BUILD_MODE' bash -s" <<'REMOTE'
 set -euo pipefail
 BUILD="$HOME/src/Bladephoriafonk-Website"
 BACKUPS="$HOME/backups"
@@ -59,9 +104,16 @@ UNIT_DROPINS=/etc/systemd/system/bladephoria-oauth.service.d
 NGINX_SITE=/etc/nginx/sites-available/bladephoriafonk.xyz
 mkdir -p "$BACKUPS"
 
-cd "$BUILD/backend"
-nice -n 15 "$HOME/.cargo/bin/cargo" build --release --locked -j 3 2>&1 | tail -n 3
-NEW_BIN="$BUILD/backend/target/release/bladephoria-web"
+if [ "$BUILD_MODE" = ci ]; then
+  # Checked again after the transfer.
+  (cd "$BUILD/ci" && sha256sum --quiet -c SHA256SUMS)
+  NEW_BIN="$BUILD/ci/bladephoria-web"
+  chmod 755 "$NEW_BIN"
+else
+  cd "$BUILD/backend"
+  nice -n 15 "$HOME/.cargo/bin/cargo" build --release --locked -j 3 2>&1 | tail -n 3
+  NEW_BIN="$BUILD/backend/target/release/bladephoria-web"
+fi
 
 # The new binary validates the production config and data before anything
 # on the server changes (it starts nothing and writes nothing).
@@ -83,17 +135,24 @@ chmod 600 "$config_backup"
 find "$BACKUPS" -maxdepth 1 -name 'website-config-*.tar.gz' ! -path "$config_backup" -delete
 echo "config backup: $config_backup"
 
-# Runtime files: pages, scripts, the profile template and tracked assets.
+# Runtime files, by allowlist: the pages and scripts at the top level, the
+# profile template and any tracked assets. Nothing else from the repository
+# (CI files, scripts, sources, docs) belongs in the site directory.
 cd "$BUILD"
-git_files=$(find . -type f ! -path './backend/*' ! -path './deploy/*' ! -path './oauth/*' \
-  ! -name '*.md' ! -name '.gitignore' | sed 's|^\./||' | sort)
+git_files=$( { find . -maxdepth 1 -type f \( -name '*.html' -o -name '*.js' \);
+  find ./profile ./assets -type f 2>/dev/null; } | sed 's|^\./||' | sort)
 manifest="$SITE_DIR/.deployed-files"
 if [ -f "$manifest" ]; then
   # Files deployed last time but gone from the repo now; never user data.
   comm -23 "$manifest" <(printf '%s\n' "$git_files") \
     | { grep -Ev '^(assets|media|oauth|diagnostics)/' || true; } \
     | while IFS= read -r stale; do
-        if [ -n "$stale" ]; then rm -f -- "$SITE_DIR/$stale" && echo "removed $stale"; fi
+        if [ -n "$stale" ]; then
+          rm -f -- "$SITE_DIR/$stale" && echo "removed $stale"
+          # and the directories it leaves empty
+          dir=$(dirname -- "$stale")
+          if [ "$dir" != . ]; then (cd "$SITE_DIR" && rmdir -p --ignore-fail-on-non-empty -- "$dir"); fi
+        fi
       done
 fi
 printf '%s\n' "$git_files" | tar -cf - -T - | tar -xf - -C "$SITE_DIR"

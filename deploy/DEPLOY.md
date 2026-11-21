@@ -14,15 +14,20 @@ deploy/deploy.sh
 
 The script:
 
-1. uploads the committed state of the repository to `~/src/Bladephoriafonk-Website` on the VPS
-   and builds the binary there (`cargo build --release --locked`; the VPS has a different glibc
-   than the local machine, so it is built only there),
+1. takes the binary that CI built for exactly this commit (the commit must be pushed; the
+   script waits for the CI run, downloads the `bladephoria-web-linux` artifact, checks its
+   SHA256 and that the VPS glibc is new enough) and uploads it together with the committed
+   state of the repository to `~/src/Bladephoriafonk-Website`. CI builds on Ubuntu 24.04, so
+   the binary needs glibc 2.39 or older and the VPS does not compile next to the game servers.
+   `BPF_BUILD=vps deploy/deploy.sh` builds on the VPS instead
+   (`cargo build --release --locked`). A static musl binary was measured too: 1.5-2.8x slower
+   per request (p50 of `/changelog` 2.4 ms instead of 1.4 ms), so it is not used,
 2. lets the new binary check the production configuration and data (`--check-config`); on an
    error it stops before anything on the server changes,
 3. backs up the configuration and data (`oauth/.env`, `oauth/data/`, the systemd unit with its
    drop-ins, the nginx site) to `~/backups/website-config-<time>.tar.gz`; only the newest is kept,
-4. copies only the files the server needs into the site directory (pages, `site-lang.js`,
-   `profile/index.html`); files removed from the repository disappear from the server (list in
+4. copies only the files the server needs into the site directory (an allowlist: the pages,
+   `site-lang.js`, `profile/index.html`); files removed from the repository disappear from the server (list in
    `.deployed-files`),
 5. when the binary changed: keeps the previous one as `~/backups/bladephoria-web.bin.<commit>`
    (only one), swaps `bladephoria-web` in the site directory, restarts the service and checks
@@ -31,7 +36,7 @@ The script:
 It never touches `oauth/.env`, `oauth/data/`, `media/`, `diagnostics/` or `assets/` (the
 modpack uploads live there).
 
-Settings (environment variables): `BPF_DEPLOY_SSH`, `BPF_DEPLOY_KEY`, `BPF_DEPLOY_DIR`,
+Settings (environment variables): `BPF_DEPLOY_SSH`, `BPF_DEPLOY_KEY`, `BPF_DEPLOY_DIR`, `BPF_BUILD`,
 described at the top of the script.
 
 ## First install
@@ -81,7 +86,7 @@ Paths relative to the site directory unless they start with `~`.
 | `oauth/data/*.corrupt-<hash>` | the server | copy of a damaged file | yes, once the file is fixed | no |
 | `diagnostics/` | the server | `events-*.jsonl`, `summary-*.md`, deleted after 14 days | yes | no |
 | `.deployed-commit`, `.deployed-files` | `deploy.sh` | deployed commit and file list | yes, but then the next deploy cannot remove stale files | no |
-| `~/src/Bladephoriafonk-Website` | `deploy.sh` | build copy of the repository and the cargo cache | yes (the next build takes longer) | no |
+| `~/src/Bladephoriafonk-Website` | `deploy.sh` | copy of the repository, `ci/` with the downloaded binary, the cargo cache for `BPF_BUILD=vps` | yes | no |
 | `~/backups/website-config-*.tar.gz` | `deploy.sh` | `.env`, `oauth/data/`, unit, nginx site (newest only) | keep the newest | it is the backup |
 | `~/backups/bladephoria-web.bin.<commit>` | `deploy.sh` | the previous binary (one) | keep it for a rollback | it is the backup |
 

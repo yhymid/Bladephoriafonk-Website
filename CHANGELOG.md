@@ -33,10 +33,15 @@
   `deploy/DEPLOY.pl.md`, with a table of every file on the server (who writes it, what it
   holds, whether it can be deleted, what to back up). `oauth/.env.example` comments are in
   English.
+- `deploy/deploy.sh` installs the release binary that CI built for the deployed commit (checked
+  by SHA256 and glibc version) instead of compiling on the VPS; `BPF_BUILD=vps` keeps the old
+  way. A static musl build was measured 1.5-2.8x slower per request and is not used.
 
 ### Fixed
 - Diagnostics no longer count complete responses of streamed files (pages without compression)
   as aborted.
+- `deploy/deploy.sh` copies runtime files by allowlist; before, `.github/` and `scripts/` ended
+  up in the site directory (never served). The next deploy removes them and the empty folders.
 
 ### Security
 - At most `MAX_PENDING_LOGINS` (default 10000, 0 = no limit) login attempts are kept while
