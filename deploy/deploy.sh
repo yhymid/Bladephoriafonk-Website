@@ -140,11 +140,13 @@ echo "config backup: $config_backup"
 # (CI files, scripts, sources, docs) belongs in the site directory.
 cd "$BUILD"
 git_files=$( { find . -maxdepth 1 -type f \( -name '*.html' -o -name '*.js' \);
-  find ./profile ./assets -type f 2>/dev/null; } | sed 's|^\./||' | sort)
+  for dir in profile assets; do if [ -d "$dir" ]; then find "./$dir" -type f; fi; done; } \
+  | sed 's|^\./||' | LC_ALL=C sort)
 manifest="$SITE_DIR/.deployed-files"
 if [ -f "$manifest" ]; then
   # Files deployed last time but gone from the repo now; never user data.
-  comm -23 "$manifest" <(printf '%s\n' "$git_files") \
+  # Byte order on both sides (the manifest is written in the same order).
+  LC_ALL=C comm -23 <(LC_ALL=C sort "$manifest") <(printf '%s\n' "$git_files") \
     | { grep -Ev '^(assets|media|oauth|diagnostics)/' || true; } \
     | while IFS= read -r stale; do
         if [ -n "$stale" ]; then
